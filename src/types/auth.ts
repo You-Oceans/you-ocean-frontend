@@ -2,9 +2,10 @@ export interface SignupFormData {
     name: string;
     email: string;
     password: string;
+    about:string,
     gender: 'male' | 'female' | 'other';
     purpose: 'personal' | 'business' | 'education';
-    image: File | null;
+    profileImage: string;
   }
   export interface SigninFormData {
     email: string;

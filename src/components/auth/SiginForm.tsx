@@ -4,7 +4,7 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useForm } from '../../hooks/useForm';
 import type { SigninFormData } from '../../types/auth';
-
+import axios from 'axios';
 const initialFormData: SigninFormData = {
   email: '',
   password: '',
@@ -12,10 +12,21 @@ const initialFormData: SigninFormData = {
 
 export default function SigninForm() {
   const { formData, handleChange } = useForm<SigninFormData>(initialFormData);
-  const handleSubmit = (e: React.FormEvent) => {
+
+  
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
+    
+    try {
+      const response = await axios.post('http://localhost:3000/auth/login', formData);
+      console.log('Response:', response.data);
+      localStorage.setItem('token', response.data.token);
+    } catch (error) {
+      console.error('Error during sign-in:', error);
+    }
   };
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">

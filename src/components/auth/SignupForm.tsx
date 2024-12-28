@@ -7,6 +7,7 @@ import { ImageUpload } from '../ImageUpload';
 import { useForm } from '../../hooks/useForm';
 import { GENDER_OPTIONS, PURPOSE_OPTIONS } from '../../constants/formOptions';
 import type { SignupFormData } from '../../types/auth';
+import axios from 'axios';
 
 const initialFormData: SignupFormData = {
   name: '',
@@ -14,7 +15,8 @@ const initialFormData: SignupFormData = {
   password: '',
   gender: 'male',
   purpose: 'personal',
-  image: null
+  profileImage: '', 
+  about: '' 
 };
 
 export default function SignupForm() {
@@ -22,31 +24,55 @@ export default function SignupForm() {
   const [previewUrl, setPreviewUrl] = useState<string>('');
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = await handleImageChange(e);
-    setPreviewUrl(url);
+    const file = e.target.files?.[0];
+    if (file) {
+      const uploadedImageUrl = await handleImageChange(e);
+      setPreviewUrl(uploadedImageUrl);
+      handleChange({
+        target: { name: 'profileImage', value: uploadedImageUrl },
+      } as React.ChangeEvent<HTMLInputElement>);
+  
+    }
   };
-  
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
-    if (!formData.name || !formData.email || !formData.password) {
+    if (!formData.name || !formData.email || !formData.password || !formData.profileImage || !formData.about) {
       alert("Please fill in all required fields.");
       return;
     }
-  
-    console.log("Form submitted:", formData);
+
+    const dataToSend = {
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      gender: formData.gender,
+      purpose: formData.purpose,
+      profileImage: formData.profileImage,
+      about: formData.about, 
+    };
+
+    try {
+      const response = await axios.post('http://localhost:3000/auth/register', dataToSend, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('Response:', response.data);
+    } catch (error) {
+      console.error('Error during sign-up:', error);
+    }
   };
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="px-8 py-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-center">Create an account</h1>
-          <h2 className="text-center">
-            Enter your information to create your account
-          </h2>
-        </div>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold text-center">Create an account</h1>
+            <h2 className="text-center">Enter your information to create your account</h2>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             <ImageUpload previewUrl={previewUrl} onChange={handleImageUpload} />
 
@@ -96,17 +122,25 @@ export default function SignupForm() {
               options={PURPOSE_OPTIONS}
             />
 
-            <Button type="submit">
-              Sign Up
-            </Button>
+            <Input
+              icon={Target} 
+              type="text"
+              name="about"
+              required
+              placeholder="About Yourself"
+              value={formData.about}
+              onChange={handleChange}
+            />
+
+            <Button type="submit">Sign Up</Button>
           </form>
+
           <div className="flex justify-center my-4">
-          <p className="text-sm text-muted-foreground">
-            Already have an account? <a href="/login" className="text-primary hover:underline">Login</a>
-          </p>
+            <p className="text-sm text-muted-foreground">
+              Already have an account? <a href="/login" className="text-primary hover:underline">Login</a>
+            </p>
+          </div>
         </div>
-        </div>
-       
       </div>
     </div>
   );
