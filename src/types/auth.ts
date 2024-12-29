@@ -3,7 +3,7 @@ export interface SignupFormData {
     email: string;
     password: string;
     about:string,
-    gender: 'male' | 'female' | 'other';
+    gender: 'MALE' | 'FEMALE' | 'OTHERS';
     purpose: 'PERSONAL' | 'BUSINESS' | 'EDUCATION';
     profileImage: string;
   }

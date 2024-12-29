@@ -1,16 +1,13 @@
-import { Route, Navigate } from 'react-router-dom';
-interface ProtectedRouteProps {
-  element: React.ReactNode;
-  redirectTo: string;
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuthStore } from '../hooks/useAuthStore';
+interface PrivateRouteProps {
+    children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ element, redirectTo }) => {
-  const isAuthenticated = localStorage.getItem('token');  
-
-  if (!isAuthenticated) {
-    return <Navigate to={redirectTo} />;
-  }
-  return <>{element}</>;
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
+  const { isAuthenticated } = useAuthStore();
+    return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
-export default ProtectedRoute;
+export default PrivateRoute;
