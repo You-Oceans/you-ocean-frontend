@@ -1,6 +1,6 @@
  import { useState, ChangeEvent } from 'react';
 
-export function useForm<T>(initialState: T) {
+export function useFormUploadation<T>(initialState: T) {
   const [formData, setFormData] = useState<T>(initialState);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

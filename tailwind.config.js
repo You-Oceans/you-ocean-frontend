@@ -52,7 +52,11 @@ export default {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			} 
+  			} ,
+
+			  primaryPurple: '#4C51BF', 
+			  primaryHoverPurple: '#434190',
+			  white: '#FFFFFF', 
   		}
   	}
   },
