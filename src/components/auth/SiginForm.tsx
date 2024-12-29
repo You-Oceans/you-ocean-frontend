@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { useForm } from '../../hooks/useForm';
 import type { SigninFormData } from '../../types/auth';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 const initialFormData: SigninFormData = {
   email: '',
   password: '',
@@ -12,7 +13,7 @@ const initialFormData: SigninFormData = {
 
 export default function SigninForm() {
   const { formData, handleChange } = useForm<SigninFormData>(initialFormData);
-
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +23,8 @@ export default function SigninForm() {
       const response = await axios.post('http://localhost:3000/auth/login', formData);
       console.log('Response:', response.data);
       localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify({ name: response.data.user.name, profileImage: response.data.user.profileImage }));
+      navigate('/dashboard')
     } catch (error) {
       console.error('Error during sign-in:', error);
     }

@@ -1,11 +1,11 @@
 export const GENDER_OPTIONS = [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'other', label: 'Other' }
+    { value: 'MALE', label: 'Male' },
+    { value: 'FEMALE', label: 'Female' },
+    { value: 'OTHERS', label: 'Other' }
   ];
   
   export const PURPOSE_OPTIONS = [
-    { value: 'personal', label: 'Personal Use' },
-    { value: 'business', label: 'Business' },
-    { value: 'education', label: 'Education' }
+    { value: 'PERSONAL', label: 'Personal Use' },
+    { value: 'BUSINESS', label: 'Business' },
+    { value: 'EDUCATION', label: 'Education' }
   ];

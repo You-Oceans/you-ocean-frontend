@@ -8,18 +8,20 @@ import { useForm } from '../../hooks/useForm';
 import { GENDER_OPTIONS, PURPOSE_OPTIONS } from '../../constants/formOptions';
 import type { SignupFormData } from '../../types/auth';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const initialFormData: SignupFormData = {
   name: '',
   email: '',
   password: '',
   gender: 'male',
-  purpose: 'personal',
+  purpose: 'PERSONAL',
   profileImage: '', 
   about: '' 
 };
 
 export default function SignupForm() {
+  const navigate = useNavigate();
   const { formData, handleChange, handleImageChange } = useForm<SignupFormData>(initialFormData);
   const [previewUrl, setPreviewUrl] = useState<string>('');
 
@@ -60,6 +62,9 @@ export default function SignupForm() {
       });
 
       console.log('Response:', response.data);
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify({ name: response.data.user.name, profileImage: response.data.user.profileImage ,email: response.data.user.email}));
+      navigate('/dashboard')
     } catch (error) {
       console.error('Error during sign-up:', error);
     }
