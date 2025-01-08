@@ -64,8 +64,14 @@ const LoginPage = () => {
     }
   };
 
+  const handleEnterPress = (e:React.KeyboardEvent)=>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      form.handleSubmit(onSubmit)();
+    }
+  }
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo bg-gray-50 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen   p-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-lg p-8">
         <h2 className="text-3xl font-bold text-center mb-2">Welcome back</h2>
         <h2 className="text-center mb-6">
@@ -73,7 +79,7 @@ const LoginPage = () => {
           </h2>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onKeyDown={handleEnterPress} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="email"
@@ -111,7 +117,7 @@ const LoginPage = () => {
               )}
             />
 
-            <Button type="submit" className="w-full  bg-primaryPurple hover:bg-primaryHoverPurple" disabled={isLoading}>
+            <Button type="submit" className="w-full  " disabled={isLoading}>
               {isLoading ? (
                 <Loader className="animate-spin mx-auto" />
               ) : (

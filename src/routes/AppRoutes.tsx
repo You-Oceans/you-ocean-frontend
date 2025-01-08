@@ -7,6 +7,8 @@ import NotFound from '../pages/NotFound';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/hooks/useAuthStore';
 import { Navbar } from '@/components/Layout/Navbar';
+import Profile from '@/pages/Profile';
+import ProfileEdit from '@/pages/ProfileEdit';
 const AppRoutes = () => {
   const { setAuthFromCookie } = useAuthStore(); 
 
@@ -21,6 +23,8 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
+        <Route path='/profile' element={<PrivateRoute><Profile /></PrivateRoute>} /> 
+        <Route path='/profile/edit' element={<PrivateRoute><ProfileEdit /></PrivateRoute>} />        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>

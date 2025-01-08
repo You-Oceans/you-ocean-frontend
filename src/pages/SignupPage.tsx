@@ -27,7 +27,8 @@ import { login, signup } from "../services/authService";
 import { useAuthStore } from "../hooks/useAuthStore";
 import { SignupFormData } from "../types/auth";
 import { ImageUpload } from "@/components/ImageUpload";
-import { signupSchema } from "@/schema/SignupSchema";
+import { signupSchema } from "@/schema/SignUpSchema"
+import { uploadImage } from "@/utilis/imageUpload";
 
 
 const SignupPage = () => {
@@ -60,22 +61,10 @@ const SignupPage = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const data = new FormData();
-      data.append("file", file);
-      data.append("upload_preset", "you-Ocean");
-      data.append("cloud_name", "dzvdh7yez");
-
       try {
-        const res = await fetch(
-          "https://api.cloudinary.com/v1_1/dzvdh7yez/image/upload",
-          {
-            method: "POST",
-            body: data,
-          }
-        );
-        const uploadImgURL = await res.json();
-        setPreviewUrl(uploadImgURL.secure_url);
-        form.setValue("profileImage", uploadImgURL.secure_url);
+        const uploadedImageUrl = await uploadImage(file);
+        setPreviewUrl(uploadedImageUrl);
+        form.setValue("profileImage", uploadedImageUrl);
       } catch (error) {
         toast.error("Image upload failed. Please try again.");
         console.error(error);
@@ -105,8 +94,15 @@ const SignupPage = () => {
     }
   };
 
+  const handleEnterPress= (e:React.KeyboardEvent) =>{
+    if(e.key==="Enter"){
+      e.preventDefault();
+      form.handleSubmit(onSubmit);
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen  bg-gradient-to-br from-blue-50 to-indigo bg-gray-50 p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <div className="w-full max-w-md bg-white shadow-md rounded-lg p-8">
         <h2 className="text-3xl font-bold text-center mb-2">Create an account</h2>
         <h2 className="text-center mb-6">
@@ -114,7 +110,7 @@ const SignupPage = () => {
           </h2>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onKeyDown={handleEnterPress} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <ImageUpload previewUrl={previewUrl} onChange={handleImageUpload} />
             <FormField
               control={form.control}
@@ -253,7 +249,7 @@ const SignupPage = () => {
                 </FormItem>
               )}
             />
-            <Button disabled={isLoading} type="submit" className="w-full bg-primaryPurple hover:bg-primaryHoverPurple">
+            <Button disabled={isLoading} type="submit" className="w-full ">
               {isLoading ? (
                 <Loader className="animate-spin mx-auto" />
               ) : (
@@ -268,3 +264,6 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
+
+
+

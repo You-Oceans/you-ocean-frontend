@@ -95,8 +95,8 @@ export function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user?.profileImage} alt={user?.email} />
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage className='object-cover' src={user?.profileImage} alt={user?.email} />
                       <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </Button>
@@ -116,7 +116,7 @@ export function Navbar() {
               </DropdownMenu>
             ) : (
               <Link to={'/login'}>
-              <Button className=' bg-primaryPurple hover:bg-primaryHoverPurple'>Sign In</Button>
+              <Button >Sign In</Button>
               </Link>
             )}
           </nav>

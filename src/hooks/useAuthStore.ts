@@ -5,6 +5,10 @@ interface userInfo {
     name: string;
     profileImage: string;
     email: string;
+    gender:string;
+    about:string;
+    purpose:string;
+
 }
 
 interface AuthState {
@@ -15,26 +19,34 @@ interface AuthState {
     setAuthFromCookie: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState & { updateUser: (updatedUser: Partial<userInfo>) => void }>((set) => ({
     user: null,
     isAuthenticated: false,
     login: (user) => {
-        sessionStorage.setItem('user', JSON.stringify(user));
-        set({ user, isAuthenticated: true });
+      sessionStorage.setItem('user', JSON.stringify(user));
+      set({ user, isAuthenticated: true });
     },
     logout: () => {
-        set({ user: null, isAuthenticated: false });
-        sessionStorage.removeItem('user');
-        Cookies.remove('authToken');
+      set({ user: null, isAuthenticated: false });
+      sessionStorage.removeItem('user');
+      Cookies.remove('authToken');
     },
     setAuthFromCookie: () => {
-        const token = Cookies.get('authToken');
-        const user = sessionStorage.getItem('user');
-
-        if (token && user) {
-            set({ user: JSON.parse(user), isAuthenticated: true });
-        } else {
-            set({ user: null, isAuthenticated: false });
-        }
+      const token = Cookies.get('authToken');
+      const user = sessionStorage.getItem('user');
+  
+      if (token && user) {
+        set({ user: JSON.parse(user), isAuthenticated: true });
+      } else {
+        set({ user: null, isAuthenticated: false });
+      }
     },
-}));
+    updateUser: (updatedUser) => {
+      set((state:any) => {
+        const newUser = { ...state.user, ...updatedUser };
+        sessionStorage.setItem('user', JSON.stringify(newUser));
+        return { ...state, user: newUser }; // Return the updated state object
+      });
+    },
+  }));
+  
