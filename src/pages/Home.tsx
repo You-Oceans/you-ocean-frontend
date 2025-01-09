@@ -1,15 +1,10 @@
-
-import { useAuthStore } from '../hooks/useAuthStore';
-import LogoutButton from '@/components/LogoutButton';
+import SpeciesVisualization from "@/components/SpeciesVisualization";
 const App = () => {
- const {user}=useAuthStore()
   return (
     <div>
-        <div>
-          <h1>Welcome, {user?.name}</h1>
-          <LogoutButton/>
-        </div>
-     
+      <div>
+        <SpeciesVisualization />
+      </div>
     </div>
   );
 };
