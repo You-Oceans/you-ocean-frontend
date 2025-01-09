@@ -57,8 +57,8 @@ export default function SpeciesVisualization() {
           <DateSelector date={date} onDateChange={setDate} />
         </div>
       </div>
-      <div className="w-full max-w-5xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="relative w-full h-[550px] bg-gray-900 rounded-t-lg">
+      <div className="w-full max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+        <div className="relative w-full h-[500px] bg-gray-900 rounded-t-lg">
           <svg viewBox="-200 -200 400 400" className="w-full h-full">
             {/* Clock circle */}
             <circle
@@ -70,16 +70,16 @@ export default function SpeciesVisualization() {
               strokeWidth="2"
             />
 
-            {/* Hour markers */}
-            {Array.from({ length: 24 }).map((_, i) => {
-              const angle = ((i * 360) / 24 - 90) * (Math.PI / 180);
+            {/* Hour markers (showing only 12AM, 6AM, 12PM, 6PM) */}
+            {[0, 6, 12, 18].map((hour) => {
+              const angle = ((hour * 360) / 24 - 90) * (Math.PI / 180);
               const x1 = 140 * Math.cos(angle);
               const y1 = 140 * Math.sin(angle);
               const x2 = 150 * Math.cos(angle);
               const y2 = 150 * Math.sin(angle);
               return (
                 <line
-                  key={i}
+                  key={hour}
                   x1={x1}
                   y1={y1}
                   x2={x2}
@@ -90,8 +90,8 @@ export default function SpeciesVisualization() {
               );
             })}
 
-            {/* Hour labels */}
-            {Array.from({ length: 24 }).map((_, hour) => {
+            {/* Hour labels for 12AM, 6AM, 12PM, and 6PM */}
+            {[0, 6, 12, 18].map((hour) => {
               const angle = ((hour * 360) / 24 - 90) * (Math.PI / 180);
               const x = 170 * Math.cos(angle);
               const y = 170 * Math.sin(angle);
@@ -110,7 +110,9 @@ export default function SpeciesVisualization() {
                     ? "12AM"
                     : hour === 12
                     ? "12PM"
-                    : `${hour}${hour < 12 ? "AM" : "PM"}`}
+                    : `${hour === 6 || hour === 18 ? hour : ""}${
+                        hour < 12 ? "AM" : "PM"
+                      }`}
                 </text>
               );
             })}
@@ -135,14 +137,12 @@ export default function SpeciesVisualization() {
           <div className="absolute bottom-4 left-4 bg-black/80 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <div className="w-4 h-4 rounded-full bg-white" />
-              <span className="text-white text-sm font-medium">
-                 Blue Whale
-              </span>
+              <span className="text-white text-sm font-medium">Blue Whale</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-green-500" />
               <span className="text-white text-sm font-medium">
-                 Humpback Whale
+                Humpback Whale
               </span>
             </div>
           </div>
