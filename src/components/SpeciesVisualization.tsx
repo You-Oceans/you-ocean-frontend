@@ -1,6 +1,3 @@
-//@ts-nocheck
-"use client";
-
 import { useState, useEffect } from "react";
 import { DateSelector } from "./DateSelector";
 import {
@@ -9,24 +6,38 @@ import {
 } from "../types/species";
 import { transformDataToPoints } from "../utilis/transform-data";
 import SpeciesDetails from "./SpeciesDetails";
-import speciesData from "../utilis/data.json";
 
 export default function SpeciesVisualization() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<SpeciesData[]>(speciesData);
+  const [data, setData] = useState<SpeciesData[]>([]);
   const [details, setDetails] = useState<SpeciesDetailsType>({
     isOpen: false,
     data: null,
   });
 
+
+  const formatDateForApi = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
   useEffect(() => {
     if (date) {
+      const formattedDate = formatDateForApi(date);
       setLoading(true);
-      setTimeout(() => {
-        setData(speciesData);
-        setLoading(false);
-      }, 1000);
+      fetch(`http://localhost:3000/data/fetchData?Date=${formattedDate}`)
+        .then((response) => response.json())
+        .then((data) => {
+          console.log(data);
+          setData(data.data);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+          setLoading(false);
+        });
     }
   }, [date]);
 
@@ -57,8 +68,8 @@ export default function SpeciesVisualization() {
           <DateSelector date={date} onDateChange={setDate} />
         </div>
       </div>
-      <div className="w-full max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="relative w-full h-[500px] bg-gray-900 rounded-t-lg">
+      <div className="w-full max-w-3xl mx-auto bg-white shadow-xl rounded-lg overflow-hidden">
+        <div className="relative w-full h-[500px] bg-gradient-to-br from-gray-900 to-blue-900 rounded-t-lg">
           <svg viewBox="-200 -200 400 400" className="w-full h-full">
             {/* Clock circle */}
             <circle
@@ -161,6 +172,7 @@ export default function SpeciesVisualization() {
           data={details.data}
         />
       </div>
+      
     </div>
   );
 }
