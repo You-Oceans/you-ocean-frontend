@@ -35,10 +35,10 @@ export const useAuthStore = create<
   setAuthFromCookie: () => {
     const token = Cookies.get("authToken");
     const user = sessionStorage.getItem("user");
-    console.log(token, user);
+    // console.log(token, user);
 
-    if (token && user) {
-      set({ user: JSON.parse(user), isAuthenticated: true });
+    if (token || user) {
+      set({ user: JSON.parse(user!), isAuthenticated: true });
     } else {
       set({ user: null, isAuthenticated: false });
     }
@@ -47,7 +47,7 @@ export const useAuthStore = create<
     set((state: any) => {
       const newUser = { ...state.user, ...updatedUser };
       sessionStorage.setItem("user", JSON.stringify(newUser));
-      return { ...state, user: newUser }; // Return the updated state object
+      return { ...state, user: newUser }; 
     });
   },
 }));

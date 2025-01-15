@@ -28,7 +28,6 @@ export default function SpeciesVisualization() {
   };
 
   const apiUrl = import.meta.env.VITE_API_FETCHDATA_API;
-  console.log(apiUrl);
   useEffect(() => {
     if (date) {
       const formattedDate = formatDateForApi(date);
