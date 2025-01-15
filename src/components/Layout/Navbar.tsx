@@ -30,26 +30,28 @@ export function Navbar() {
   const { isAuthenticated: isLoggedIn, logout, user } = useAuthStore();
 
   return (
-    <header className="sticky top-0 z-50 px-4 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between lg:px-16">
-        <div className="flex items-center">
-          <span className="hidden font-bold sm:inline-block text-primary text-lg">
+    <header className="sticky top-0 z-50 w-full  border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center justify-between px-4  lg:px-12">
+        <div className="flex items-center md:w-1/4">
+          <Link to="/" className="font-bold text-primary text-lg">
             YOUOCEANS
-          </span>
+          </Link>
         </div>
 
-        <div className="flex justify-center items-center w-full">
+        <div className="hidden md:flex md:flex-1 md:justify-center">
           <NavigationMenu>
-            <NavigationMenuList className="flex space-x-12">
+            <NavigationMenuList className="flex space-x-6">
               {navigationItems.map((item) => (
                 <NavigationMenuItem key={item.title}>
-                  <NavigationMenuLink
-                    href={item.href}
-                    className={cn(
-                      "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
-                    )}
-                  >
-                    {item.title}
+                  <NavigationMenuLink asChild>
+                    <Link
+                      to={item.href}
+                      className={cn(
+                        "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
+                      )}
+                    >
+                      {item.title}
+                    </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               ))}
@@ -57,44 +59,44 @@ export function Navbar() {
           </NavigationMenu>
         </div>
 
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
+        <div className="flex items-center justify-end gap-4 md:w-1/4">
+          {/* Mobile Menu */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                className="px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
+              >
+                <Menu className="h-8 w-8" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="left"
+              className="w-[300px] sm:w-[400px] bg-gradient-to-br from-primary/30 to-background/90 shadow-2xl"
             >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="pr-0">
-            <NavigationMenu>
-              <NavigationMenuList className="flex flex-col space-y-2">
-                {navigationItems.map((item) => (
-                  <NavigationMenuItem key={item.title}>
-                    <NavigationMenuLink
-                      href={item.href}
-                      className={cn(
-                        "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      )}
+              <nav className="flex flex-col gap-6  py-6">
+                <Link to="/" className="flex items-center space-x-3">
+                  <span className="font-extrabold text-primary text-3xl tracking-wide">
+                    YOUOCEANS
+                  </span>
+                </Link>
+
+                <div className="flex flex-col space-y-3">
+                  {navigationItems.map((item) => (
+                    <Link
+                      key={item.title}
+                      to={item.href}
+                      className="flex items-center text-lg font-medium text-muted-foreground hover:text-primary p-4 hover:bg-muted rounded-lg shadow-sm transition-all duration-300 ease-in-out"
                     >
                       {item.title}
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                ))}
-              </NavigationMenuList>
-            </NavigationMenu>
-          </SheetContent>
-        </Sheet>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex-1 md:w-auto md:flex-none">
-            <Button
-              variant="ghost"
-              className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 md:hidden"
-            >
-              <span className="font-bold">YOU-OCEANS</span>
-            </Button>
-          </div>
+                    </Link>
+                  ))}
+                </div>
+              </nav>
+            </SheetContent>
+          </Sheet>
+
           <nav className="flex items-center">
             {isLoggedIn ? (
               <DropdownMenu>
@@ -103,36 +105,39 @@ export function Navbar() {
                     variant="ghost"
                     className="relative h-8 w-8 rounded-full"
                   >
-                    <Avatar className="h-12 w-12">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage
-                        className="object-cover"
                         src={user?.profileImage}
-                        alt={user?.email}
+                        alt={user?.email || "User avatar"}
+                        className="object-cover"
                       />
-                      <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>
+                        {user?.name?.charAt(0) || "U"}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuItem className=" cursor-pointer" asChild>
-                    <Link to="/profile">Profile</Link>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer w-full">
+                      Profile
+                    </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className=" cursor-pointer" asChild>
-                    <Link to="/profile/edit">Edit Profile</Link>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile/edit" className="cursor-pointer w-full">
+                      Edit Profile
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className=" cursor-pointer"
-                    onClick={logout}
-                  >
+                  <DropdownMenuItem className="cursor-pointer" onClick={logout}>
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link to={"/login"}>
-                <Button>Sign In</Button>
-              </Link>
+              <Button asChild>
+                <Link to="/login">Sign In</Link>
+              </Button>
             )}
           </nav>
         </div>
