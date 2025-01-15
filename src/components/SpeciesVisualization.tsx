@@ -27,11 +27,13 @@ export default function SpeciesVisualization() {
     return `${year}-${month}-${day}`;
   };
 
+  const apiUrl = import.meta.env.VITE_API_FETCHDATA_API;
+  console.log(apiUrl);
   useEffect(() => {
     if (date) {
       const formattedDate = formatDateForApi(date);
       setLoading(true);
-      fetch(`http://localhost:3000/data/fetchData?Date=${formattedDate}`, {
+      fetch(`${apiUrl}/data/fetchData?Date=${formattedDate}`, {
         credentials: "include",
       })
         .then((response) => response.json())
@@ -60,7 +62,7 @@ export default function SpeciesVisualization() {
       isOpen: true,
       data: { ...point, isLoading: true },
     });
-    // Simulate loading delay
+
     setTimeout(() => {
       setDetails((prev) => ({
         ...prev,
