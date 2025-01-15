@@ -33,7 +33,7 @@ export default function SpeciesVisualization() {
     if (date) {
       const formattedDate = formatDateForApi(date);
       setLoading(true);
-      fetch(`${apiUrl}/data/fetchData?Date=${formattedDate}`, {
+      fetch(`${apiUrl}/data/fetchData?Date=${formattedDate}`,{
         credentials: "include",
       })
         .then((response) => response.json())
