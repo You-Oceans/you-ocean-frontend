@@ -25,7 +25,7 @@ export default function Footer() {
                 <FaLinkedinIn size={24} />
               </a>
             </div>
-            <div className="mt-4 flex items-center">
+            <div className="mt-8 flex items-center">
               <MdMailOutline size={20} className="mr-2" />
               <a
                 href="mailto:info@you-oceans.com"
@@ -45,7 +45,7 @@ export default function Footer() {
         <img
           src="/Vector (1).svg"
           alt="SVG Image"
-          className="w-[150px] sm:w-[200px] lg:w-[300px] h-auto opacity-50"
+          className="w-[210px] sm:w-[200px] lg:w-[200px] h-auto opacity-50"
         />
       </div>
     </footer>

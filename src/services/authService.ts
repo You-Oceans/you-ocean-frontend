@@ -10,6 +10,6 @@ export const login = async (data: SigninFormData) => {
 };
 
 export const signup = async (data: SignupFormData) => {
-  const response = await axios.post(`${API_URL}/register`, data);
+  const response = await axios.post(`${API_URL}/auth/register`, data);
   return response.data;
 };
