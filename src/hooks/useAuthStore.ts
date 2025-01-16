@@ -35,7 +35,7 @@ export const useAuthStore = create<
   setAuthFromCookie: () => {
     const token = Cookies.get("authToken");
     const user = sessionStorage.getItem("user");
-    // console.log(token, user);
+    console.log(token, user);
 
     if (token || user) {
       set({ user: JSON.parse(user!), isAuthenticated: true });
