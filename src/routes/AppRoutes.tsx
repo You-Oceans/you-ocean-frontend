@@ -9,7 +9,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { Navbar } from "@/components/Layout/Navbar";
 import Profile from "@/pages/Profile";
 import ProfileEdit from "@/pages/ProfileEdit";
-import  Footer  from "@/components/Layout/Footer";
+import Footer from "@/components/Layout/Footer";
 const AppRoutes = () => {
   const { setAuthFromCookie } = useAuthStore();
 
@@ -23,14 +23,7 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <Home />
-            </PrivateRoute>
-          }
-        />
+        <Route path="/" element={<Home />} />
         <Route
           path="/profile"
           element={
