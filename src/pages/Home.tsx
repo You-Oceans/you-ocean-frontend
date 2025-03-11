@@ -1,10 +1,8 @@
 import SpeciesVisualization from "@/components/SpeciesVisualization";
 const App = () => {
   return (
-    <div>
-      <div>
-        <SpeciesVisualization />
-      </div>
+    <div className="md:h-screen">
+      <SpeciesVisualization />
     </div>
   );
 };

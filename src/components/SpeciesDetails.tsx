@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SpeciesData } from "../types/species";
 import Shimmer from "./Shimmer";
 import {
@@ -20,6 +20,8 @@ export default function SpeciesDetails({
   onClose,
   data,
 }: SpeciesDetailsProps) {
+  const [speciesName, setSpeciesName] = useState("");
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -27,6 +29,20 @@ export default function SpeciesDetails({
       document.body.style.overflow = "unset";
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    if (data.label === "BLUE_A") {
+      setSpeciesName("Blue A");
+    } else if (data.label === "BLUE_B") {
+      setSpeciesName("Blue B");
+    } else if (data.label === "HUMPBACK") {
+      setSpeciesName("Humpback");
+    } else {
+      setSpeciesName("Ship");
+    }
+  }, [data]);
 
   if (!data) return null;
 
@@ -37,9 +53,9 @@ export default function SpeciesDetails({
         className="w-[400px] bg-white/95 backdrop-blur-lg shadow-lg"
       >
         <div className="p-6 h-full overflow-auto">
-          <SheetHeader>
+          <SheetHeader className="border-b-2">
             <SheetTitle className="text-3xl font-bold mb-4">
-              {data.label} Details
+              {speciesName} Details
             </SheetTitle>
           </SheetHeader>
 
@@ -56,14 +72,18 @@ export default function SpeciesDetails({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-500">
-                    Time
+                    Hour
                   </span>
-                  <Badge variant="secondary">{`${data.hour}:${Math.floor(
-                    data.second / 60
-                  )
-                    .toString()
-                    .padStart(2, "0")}`}</Badge>
+                  <Badge variant="secondary">{data.hour}</Badge>
                 </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    Second
+                  </span>
+                  <Badge variant="secondary">{data.second}</Badge>
+                </div>
+
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-gray-500">
                     Confidence
@@ -84,6 +104,32 @@ export default function SpeciesDetails({
                   </span>
                   <Badge variant="secondary">
                     {data.mean_frequency.toFixed(2)} Hz
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    L50 Power
+                  </span>
+                  <Badge variant="secondary">
+                    {data.l50_power.toFixed(2)} Hz
+                  </Badge>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    L75 Power
+                  </span>
+                  <Badge variant="secondary">
+                    {data.l75_power.toFixed(2)} Hz
+                  </Badge>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-500">
+                    L90 Power
+                  </span>
+                  <Badge variant="secondary">
+                    {data.l90_power.toFixed(2)} Hz
                   </Badge>
                 </div>
               </div>

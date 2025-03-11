@@ -1,5 +1,13 @@
 import * as React from "react";
-import { format, getMonth, getYear, setMonth, setYear } from "date-fns";
+import {
+  format,
+  getMonth,
+  getYear,
+  setMonth,
+  setYear,
+  isBefore,
+  isAfter,
+} from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -21,20 +29,16 @@ import {
 interface DateSelectorProps {
   date?: Date;
   onDateChange: (date: Date | undefined) => void;
-  startYear?: number;
-  endYear?: number;
 }
 
 export function DateSelector({
   date = new Date(),
   onDateChange,
-  startYear = getYear(new Date()) - 100,
-  endYear = getYear(new Date()) + 100,
 }: DateSelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [tempDate, setTempDate] = React.useState<Date>(date);
 
-  const monthNames = [
+  const allowedMonths = [
     "January",
     "February",
     "March",
@@ -49,30 +53,33 @@ export function DateSelector({
     "December",
   ];
 
-  const availableYears = Array.from(
-    { length: endYear - startYear + 1 },
-    (_, i) => startYear + i
-  );
+  const startDate = new Date(2024, 0, 1); // Jan 1, 2024
+  const endDate = new Date(2024, 6, 31); // Aug 31, 2024
+  const isDateValid =
+    !isBefore(tempDate, startDate) && !isAfter(tempDate, endDate);
 
   const handleMonthSelect = (month: string) => {
-    const newDate = setMonth(tempDate, monthNames.indexOf(month));
-    setTempDate(newDate);
-  };
-
-  const handleYearSelect = (year: string) => {
-    const newDate = setYear(tempDate, parseInt(year));
-    setTempDate(newDate);
+    const newDate = setMonth(tempDate, allowedMonths.indexOf(month));
+    if (!isBefore(newDate, startDate) && !isAfter(newDate, endDate)) {
+      setTempDate(newDate);
+    }
   };
 
   const handleDateSelect = (newDate: Date | undefined) => {
-    if (newDate) {
+    if (
+      newDate &&
+      !isBefore(newDate, startDate) &&
+      !isAfter(newDate, endDate)
+    ) {
       setTempDate(newDate);
     }
   };
 
   const handleConfirm = () => {
-    onDateChange(tempDate); 
-    setIsOpen(false);
+    if (!isBefore(tempDate, startDate) && !isAfter(tempDate, endDate)) {
+      onDateChange(tempDate);
+      setIsOpen(false);
+    }
   };
 
   return (
@@ -81,7 +88,7 @@ export function DateSelector({
         <Button
           variant={"outline"}
           className={cn(
-            "w-[240px] justify-start text-left font-normal",
+            "w-[220px] lg:w-[240px] justify-start text-left font-normal",
             !tempDate && "text-muted-foreground"
           )}
         >
@@ -93,13 +100,13 @@ export function DateSelector({
         <div className="flex justify-between p-2">
           <Select
             onValueChange={handleMonthSelect}
-            value={monthNames[getMonth(tempDate)]}
+            value={allowedMonths[getMonth(tempDate)]}
           >
             <SelectTrigger className="w-[110px]">
               <SelectValue placeholder="Month" />
             </SelectTrigger>
             <SelectContent>
-              {monthNames.map((month) => (
+              {allowedMonths.map((month) => (
                 <SelectItem key={month} value={month}>
                   {month}
                 </SelectItem>
@@ -107,14 +114,16 @@ export function DateSelector({
             </SelectContent>
           </Select>
           <Select
-            onValueChange={handleYearSelect}
-            value={getYear(tempDate).toString()}
+            onValueChange={(year) =>
+              setTempDate(setYear(tempDate, parseInt(year)))
+            }
+            value={getYear(tempDate).toString()} // Ensure it's a string
           >
             <SelectTrigger className="w-[110px]">
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
-              {availableYears.map((year) => (
+              {[2023, 2024, 2025, 2026].map((year) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
                 </SelectItem>
@@ -130,13 +139,21 @@ export function DateSelector({
           initialFocus
           month={tempDate}
           onMonthChange={setTempDate}
+          disabled={(date) =>
+            isBefore(date, startDate) || isAfter(date, endDate)
+          }
         />
 
         <div className="flex justify-end p-2">
           <Button variant="outline" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleConfirm} className="ml-2">
+          <Button
+            disabled={!isDateValid}
+            variant="default"
+            onClick={handleConfirm}
+            className="ml-2"
+          >
             Confirm
           </Button>
         </div>
