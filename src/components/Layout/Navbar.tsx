@@ -21,8 +21,8 @@ import {
 
 const navigationItems = [
   { title: "Home", href: "/" },
+  { title: "Search", href: "/search" },
   { title: "About", href: "/about" },
-  { title: "Services", href: "/services" },
   { title: "Contact", href: "/contact" },
 ];
 
