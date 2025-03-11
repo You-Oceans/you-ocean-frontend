@@ -116,10 +116,10 @@ export default function StatisticsDashboard({
     count: stat.count,
   }));
 
-  const confidenceData = speciesStats.map((stat) => ({
-    name: formatSpeciesLabel(stat.label),
-    confidence: Number.parseFloat(stat.avgConfidence.toFixed(2)),
-  }));
+//   const confidenceData = speciesStats.map((stat) => ({
+//     name: formatSpeciesLabel(stat.label),
+//     confidence: Number.parseFloat(stat.avgConfidence.toFixed(2)),
+//   }));
 
   const powerData = speciesStats.map((stat) => ({
     name: formatSpeciesLabel(stat.label),
