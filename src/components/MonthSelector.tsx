@@ -24,8 +24,10 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newYear = Number(e.target.value);
-    setYear(newYear);
-    onMonthChange(month, newYear);
+    if (newYear === 2024) {
+      setYear(newYear);
+      onMonthChange(month, newYear);
+    }
   };
 
   return (
@@ -48,13 +50,18 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
         <select
           value={year}
           onChange={handleYearChange}
-          className="border rounded p-1 px-4 cursor-pointer"
+          className="border rounded p-1 px-4 cursor-pointer "
         >
           {Array.from(
             { length: 5 },
             (_, i) => new Date().getFullYear() - i
           ).map((y) => (
-            <option key={y} value={y}>
+            <option
+              key={y}
+              value={y}
+              disabled={y !== 2024}
+              className={y === 2024 ? "cursor-pointer " : "text-gray-400 "}
+            >
               {y}
             </option>
           ))}
