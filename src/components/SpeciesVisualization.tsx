@@ -7,8 +7,6 @@ import {
 import { transformDataToPoints } from "../utilis/transform-data";
 import SpeciesDetails from "./SpeciesDetails";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { XCircle } from "lucide-react";
 
 export default function SpeciesVisualization() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -18,7 +16,6 @@ export default function SpeciesVisualization() {
     isOpen: false,
     data: null,
   });
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const formatDateForApi = (date: Date) => {
     const year = date.getFullYear();
@@ -32,25 +29,28 @@ export default function SpeciesVisualization() {
     if (date) {
       const formattedDate = formatDateForApi(date);
       setLoading(true);
-      fetch(`${apiUrl}/data/fetchData?Date=${formattedDate}`,{
+      fetch(`${apiUrl}/data/fetchData?Date=${formattedDate}`, {
         credentials: "include",
       })
         .then((response) => response.json())
-        .then((data) => {
-          console.log(data);
-          if (data.data && data.data.length === 0) {
-            setAlertMessage(
-              `No data found for the selected date: ${formattedDate}`
-            );
+        .then((result) => {
+          console.log(result);
+
+          if (
+            result.success &&
+            (result.data === "Acknowledged." ||
+              !result.data ||
+              result.data.length === 0)
+          ) {
+            setData([]);
           } else {
-            setAlertMessage(null);
+            setData(result.data);
           }
-          setData(data.data);
           setLoading(false);
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
-          setAlertMessage("Error fetching data. Please try again.");
+          setData([]);
           setLoading(false);
         });
     }
@@ -73,19 +73,21 @@ export default function SpeciesVisualization() {
   const points = transformDataToPoints(data);
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="container mx-auto lg:px-6 py-8">
       <Card className="w-full">
-        <CardHeader className="flex flex-col md:flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-center justify-between">
           <CardTitle className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">
             Species Visualization
           </CardTitle>
-          <div className="flex items-center space-x-4">
-            <h2 className="text-lg font-medium text-gray-700">Select Date:</h2>
-            <DateSelector date={date} onDateChange={setDate} />
+          <div className="flex items-center space-x-2 lg:space-x-4">
+            <h2 className="text-sm lg:text-lg font-medium text-gray-700">
+              Select Date:
+            </h2>
+            <DateSelector date={date} onDateChange={setDate}  />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative w-full h-[480px] bg-gradient-to-br from-gray-900 to-blue-900 rounded-lg">
+          <div className="relative w-full h-[600px] lg:h-[500px] bg-gradient-to-br from-gray-900 to-blue-900 rounded-lg">
             <svg viewBox="-200 -200 400 400" className="w-full h-full">
               {/* Clock circle */}
               <circle
@@ -159,25 +161,33 @@ export default function SpeciesVisualization() {
                 </circle>
               ))}
             </svg>
-
             {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-black/80 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-4 h-4 rounded-full bg-white" />
+            <div className="absolute bottom-4 left-4 bg-black/80 p-4 rounded-lg mt-8">
+              <div className="flex items-center gap-2 ">
+                <div className="w-4 h-4 rounded-full bg-[#22C55E]" />
                 <span className="text-white text-sm font-medium">
-                  Blue Whale
+                  Blue A Whale
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-green-500" />
+                <div className="w-4 h-4 rounded-full bg-[#FFFFFF]" />
+                <span className="text-white text-sm font-medium">
+                  Blue B Whale
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-[#FF0000]" />
                 <span className="text-white text-sm font-medium">
                   Humpback Whale
                 </span>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-[#0000FF] " />
+                <span className="text-white text-sm font-medium">Ship</span>
+              </div>
             </div>
           </div>
 
-          {/* Loading indicator */}
           {loading && (
             <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center">
               <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-white"></div>
@@ -191,14 +201,6 @@ export default function SpeciesVisualization() {
           />
         </CardContent>
       </Card>
-
-      {alertMessage && (
-        <Alert variant="destructive" className="mt-4">
-          <XCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{alertMessage}</AlertDescription>
-        </Alert>
-      )}
     </div>
   );
 }
