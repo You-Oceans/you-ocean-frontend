@@ -27,7 +27,7 @@ const Map: React.FC = () => {
         const centerCoords = { lat: 36.7125, lng: -122.1868 };
         const map = new google.maps.Map(mapRef.current as HTMLDivElement, {
           center: centerCoords,
-          zoom: 2,
+          zoom: 10,
         });
 
         const infoWindow = new google.maps.InfoWindow({
