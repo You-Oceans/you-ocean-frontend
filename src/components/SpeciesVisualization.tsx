@@ -75,13 +75,15 @@ export default function SpeciesVisualization() {
   return (
     <div className="container mx-auto lg:px-6 py-8">
       <Card className="w-full">
-        <CardHeader className="flex flex-col md:flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-center justify-between">
           <CardTitle className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">
             Species Visualization
           </CardTitle>
           <div className="flex items-center space-x-2 lg:space-x-4">
-            <h2 className="text-lg font-medium text-gray-700">Select Date:</h2>
-            <DateSelector date={date} onDateChange={setDate} />
+            <h2 className="text-sm lg:text-lg font-medium text-gray-700">
+              Select Date:
+            </h2>
+            <DateSelector date={date} onDateChange={setDate}  />
           </div>
         </CardHeader>
         <CardContent>

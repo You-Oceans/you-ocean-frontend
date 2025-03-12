@@ -88,7 +88,7 @@ export function DateSelector({
         <Button
           variant={"outline"}
           className={cn(
-            "w-[220px] lg:w-[240px] justify-start text-left font-normal",
+            "w-[200px] lg:w-[240px] justify-start text-left font-normal",
             !tempDate && "text-muted-foreground"
           )}
         >

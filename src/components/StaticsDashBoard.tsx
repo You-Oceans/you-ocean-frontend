@@ -116,10 +116,10 @@ export default function StatisticsDashboard({
     count: stat.count,
   }));
 
-//   const confidenceData = speciesStats.map((stat) => ({
-//     name: formatSpeciesLabel(stat.label),
-//     confidence: Number.parseFloat(stat.avgConfidence.toFixed(2)),
-//   }));
+  //   const confidenceData = speciesStats.map((stat) => ({
+  //     name: formatSpeciesLabel(stat.label),
+  //     confidence: Number.parseFloat(stat.avgConfidence.toFixed(2)),
+  //   }));
 
   const powerData = speciesStats.map((stat) => ({
     name: formatSpeciesLabel(stat.label),
@@ -222,11 +222,19 @@ export default function StatisticsDashboard({
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="species">By Species</TabsTrigger>
-          <TabsTrigger value="hourly">Hourly Distribution</TabsTrigger>
-          <TabsTrigger value="power">Power Analysis</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 ">
+          <TabsTrigger className="text-xs lg:text-lg" value="overview">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger className="text-xs lg:text-lg" value="species">
+            By Species
+          </TabsTrigger>
+          <TabsTrigger className="text-xs lg:text-lg" value="hourly">
+            Hourly Distribution
+          </TabsTrigger>
+          <TabsTrigger className="text-xs lg:text-lg" value="power">
+            Power Analysis
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
