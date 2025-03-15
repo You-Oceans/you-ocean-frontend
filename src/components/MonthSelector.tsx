@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 interface MonthSelectorProps {
-  selectedMonth?: { month: number; year: number };
+  selectedMonth: { month: number; year: number };
   onMonthChange: (month: number, year: number) => void;
 }
 
@@ -9,12 +9,8 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
   selectedMonth,
   onMonthChange,
 }) => {
-  const [month, setMonth] = useState(
-    selectedMonth?.month || new Date().getMonth() + 1
-  );
-  const [year, setYear] = useState(
-    selectedMonth?.year || new Date().getFullYear()
-  );
+  const [month, setMonth] = useState(selectedMonth.month);
+  const [year, setYear] = useState(selectedMonth.year);
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newMonth = Number(e.target.value);
@@ -24,10 +20,8 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
 
   const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newYear = Number(e.target.value);
-    if (newYear === 2024) {
-      setYear(newYear);
-      onMonthChange(month, newYear);
-    }
+    setYear(newYear);
+    onMonthChange(month, newYear);
   };
 
   return (
@@ -39,7 +33,7 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
           onChange={handleMonthChange}
           className="border rounded p-1 px-4 cursor-pointer"
         >
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+          {Array.from({ length: 7 }, (_, i) => i + 1).map((m) => (
             <option key={m} value={m}>
               {new Date(0, m - 1).toLocaleString("default", { month: "long" })}
             </option>
@@ -50,31 +44,11 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
         <select
           value={year}
           onChange={handleYearChange}
-          className="border rounded p-1 px-4 cursor-pointer "
+          className="border rounded p-1 px-4 cursor-pointer"
         >
-          {Array.from(
-            { length: 5 },
-            (_, i) => new Date().getFullYear() - i
-          ).map((y) => (
-            <option
-              key={y}
-              value={y}
-              disabled={y !== 2024}
-              className={y === 2024 ? "cursor-pointer " : "text-gray-400 "}
-            >
-              {y}
-            </option>
-          ))}
+          <option value={2024}>2024</option>
         </select>
       </div>
-
-      {/* Select Button */}
-      <button
-        onClick={() => onMonthChange(month, year)}
-        className="bg-primary text-white px-8 py-1 rounded hover:bg-primary-dark transition"
-      >
-        Select
-      </button>
     </div>
   );
 };

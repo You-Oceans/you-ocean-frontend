@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import SpeciesVisualization from "@/components/SpeciesVisualization";
 import { DateSelector } from "@/components/DateSelector";
@@ -9,22 +7,27 @@ import StatisticsDashboard from "@/components/StaticsDashBoard";
 
 export default function App() {
   const [data, setData] = useState<any[] | null>(null);
-  const [showWeekCalendar, setShowWeekCalendar] = useState(false);
-  const [showMonthCalendar, setShowMonthCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<{
     month: number;
     year: number;
-  } | null>(null);
-  const [timeframe, setTimeframe] = useState<string | null>(null);
+  }>({
+    month: 7,
+    year: 2024,
+  });
+  const [timeframe, setTimeframe] = useState<"week" | "month">("month");
+
+  useEffect(() => {
+    fetchData("month", undefined, { month: 7, year: 2024 });
+  }, []);
 
   const fetchData = async (
-    timeframe: "day" | "week" | "month",
+    timeframe: "week" | "month",
     selectedDate?: Date,
     selectedMonth?: { month: number; year: number }
   ) => {
     setTimeframe(timeframe);
-    let apiUrl = import.meta.env.VITE_API_FETCHDATA_API; // Fix variable declaration
+    let apiUrl = import.meta.env.VITE_API_FETCHDATA_API;
 
     if (!apiUrl) {
       console.error("API URL is not defined in .env file");
@@ -33,19 +36,14 @@ export default function App() {
 
     if (timeframe === "week") {
       if (!selectedDate) {
-        setShowWeekCalendar(true);
-        return;
+        const defaultDate = new Date(2024, 6, 1);
+        setSelectedDate(defaultDate);
+        return fetchData("week", defaultDate);
       }
-
       const weekNumber = getISOWeek(selectedDate);
       const year = selectedDate.getFullYear();
       apiUrl = `${apiUrl}/data/fetchDataByWeek?weekNumber=${weekNumber}&year=${year}`;
-    } else if (timeframe === "month") {
-      if (!selectedMonth) {
-        setShowMonthCalendar(true);
-        return;
-      }
-
+    } else if (timeframe === "month" && selectedMonth) {
       const { month, year } = selectedMonth;
       apiUrl = `${apiUrl}/data/fetchDataByMonth?month=${month}&year=${year}`;
     }
@@ -54,14 +52,11 @@ export default function App() {
       const response = await fetch(apiUrl);
       const result = await response.json();
       setData(result.data || []);
-      setShowWeekCalendar(false);
-      setShowMonthCalendar(false);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
 
-  // Helper function to get ISO week number
   const getISOWeek = (date: Date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -71,8 +66,8 @@ export default function App() {
   };
 
   return (
-    <div className="container mx-auto pb-4 space-y-4 ">
-      <div className=" rounded-lg shadow-md px-6 py-2">
+    <div className="container mx-auto pb-4 space-y-4">
+      <div className="rounded-lg shadow-md px-6 py-2">
         <SpeciesVisualization />
       </div>
 
@@ -81,14 +76,14 @@ export default function App() {
 
         <div className="flex flex-wrap justify-center gap-4 mb-8">
           <Button
-            onClick={() => setShowWeekCalendar(true)}
+            onClick={() => fetchData("week")}
             variant={timeframe === "week" ? "default" : "outline"}
             className="min-w-32"
           >
             Weekly Statistics
           </Button>
           <Button
-            onClick={() => setShowMonthCalendar(true)}
+            onClick={() => fetchData("month", undefined, selectedMonth)}
             variant={timeframe === "month" ? "default" : "outline"}
             className="min-w-32"
           >
@@ -96,7 +91,7 @@ export default function App() {
           </Button>
         </div>
 
-        {showWeekCalendar && (
+        {timeframe === "week" && (
           <div className="flex justify-center mt-4 mb-8">
             <DateSelector
               date={selectedDate || undefined}
@@ -110,10 +105,10 @@ export default function App() {
           </div>
         )}
 
-        {showMonthCalendar && (
+        {timeframe === "month" && (
           <div className="flex justify-center mt-4 mb-8">
             <MonthSelector
-              selectedMonth={selectedMonth || undefined}
+              selectedMonth={selectedMonth}
               onMonthChange={(month, year) => {
                 setSelectedMonth({ month, year });
                 fetchData("month", undefined, { month, year });
@@ -124,7 +119,7 @@ export default function App() {
 
         {data && <StatisticsDashboard data={data} />}
 
-        {!data && !showWeekCalendar && !showMonthCalendar && (
+        {!data && (
           <div className="text-center p-8 text-gray-500">
             Select a time period to view detection statistics
           </div>
