@@ -29,10 +29,12 @@ import {
 interface DateSelectorProps {
   date?: Date;
   onDateChange: (date: Date | undefined) => void;
+  minDate: Date;
+  maxDate: Date;
 }
 
 export function DateSelector({
-  date = new Date(),
+  date = new Date(2024, 6, 1),
   onDateChange,
 }: DateSelectorProps) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -46,15 +48,10 @@ export function DateSelector({
     "May",
     "June",
     "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
   ];
 
-  const startDate = new Date(2024, 0, 1); // Jan 1, 2024
-  const endDate = new Date(2024, 6, 31); // Aug 31, 2024
+  const startDate = new Date(2024, 0, 1);
+  const endDate = new Date(2024, 6, 31);
   const isDateValid =
     !isBefore(tempDate, startDate) && !isAfter(tempDate, endDate);
 
@@ -123,7 +120,7 @@ export function DateSelector({
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
-              {[2023, 2024, 2025, 2026].map((year) => (
+              {[2024].map((year) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
                 </SelectItem>
