@@ -7,20 +7,25 @@ import {
 import { transformDataToPoints } from "../utilis/transform-data";
 import SpeciesDetails from "./SpeciesDetails";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
+import { IoLocationOutline } from "react-icons/io5";
 export default function SpeciesVisualization() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(new Date(2024, 0, 1));
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SpeciesData[]>([]);
   const [details, setDetails] = useState<SpeciesDetailsType>({
     isOpen: false,
     data: null,
   });
-
   const formatDateForApi = (date: Date) => {
+    const minDate = new Date(2024, 0, 1);
+    const maxDate = new Date(2024, 6, 31);
+    if (date < minDate) return "2024-01-01";
+    if (date > maxDate) return "2024-07-31";
+
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, "0");
     const day = date.getDate().toString().padStart(2, "0");
+
     return `${year}-${month}-${day}`;
   };
 
@@ -83,7 +88,23 @@ export default function SpeciesVisualization() {
             <h2 className="text-sm lg:text-lg font-medium text-gray-700">
               Select Date:
             </h2>
-            <DateSelector date={date} onDateChange={setDate}  />
+            <DateSelector
+              date={date}
+              onDateChange={(selectedDate) => {
+                const minDate = new Date(2024, 0, 1);
+                const maxDate = new Date(2024, 6, 31);
+
+                if (
+                  selectedDate &&
+                  selectedDate >= minDate &&
+                  selectedDate <= maxDate
+                ) {
+                  setDate(selectedDate);
+                }
+              }}
+              minDate={new Date(2024, 0, 1)}
+              maxDate={new Date(2024, 6, 31)}
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -161,29 +182,37 @@ export default function SpeciesVisualization() {
                 </circle>
               ))}
             </svg>
-            {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-black/80 p-4 rounded-lg mt-8">
-              <div className="flex items-center gap-2 ">
-                <div className="w-4 h-4 rounded-full bg-[#22C55E]" />
-                <span className="text-white text-sm font-medium">
-                  Blue A Whale
-                </span>
+
+            <div className="absolute bottom-4 left-4 right-4 flex flex-col lg:flex-row justify-start lg:justify-between space-y-2 lg:space-y-0">
+              <div className="bg-black/80 px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[#22C55E]" />
+                  <span className="text-white text-sm font-medium">
+                    Blue A Whale
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[#FFFFFF]" />
+                  <span className="text-white text-sm font-medium">
+                    Blue B Whale
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[#FF0000]" />
+                  <span className="text-white text-sm font-medium">
+                    Humpback Whale
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[#0000FF]" />
+                  <span className="text-white text-sm font-medium">Ship</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-[#FFFFFF]" />
+              <div className="bg-black/80 px-2 py-1 rounded-lg flex items-center gap-2">
+                <IoLocationOutline className="h-6 w-6 text-red-500" />
                 <span className="text-white text-sm font-medium">
-                  Blue B Whale
+                  Monterey Bay Aquarium Research Institute (Hydrophone Station)
                 </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-[#FF0000]" />
-                <span className="text-white text-sm font-medium">
-                  Humpback Whale
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-[#0000FF] " />
-                <span className="text-white text-sm font-medium">Ship</span>
               </div>
             </div>
           </div>

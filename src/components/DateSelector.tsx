@@ -29,6 +29,8 @@ import {
 interface DateSelectorProps {
   date?: Date;
   onDateChange: (date: Date | undefined) => void;
+  minDate: Date;
+  maxDate: Date;
 }
 
 export function DateSelector({
@@ -48,8 +50,8 @@ export function DateSelector({
     "July",
   ];
 
-  const startDate = new Date(2024, 0, 1); 
-  const endDate = new Date(2024, 6, 31); 
+  const startDate = new Date(2024, 0, 1);
+  const endDate = new Date(2024, 6, 31);
   const isDateValid =
     !isBefore(tempDate, startDate) && !isAfter(tempDate, endDate);
 

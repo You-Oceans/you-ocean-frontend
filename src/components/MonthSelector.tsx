@@ -27,7 +27,6 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
   return (
     <div className="flex space-x-4 items-center">
       <div className="border p-1 space-x-2 px-4 flex items-center">
-        {/* Month Selector */}
         <select
           value={month}
           onChange={handleMonthChange}
@@ -39,8 +38,6 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
             </option>
           ))}
         </select>
-
-        {/* Year Selector */}
         <select
           value={year}
           onChange={handleYearChange}
