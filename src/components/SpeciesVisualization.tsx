@@ -81,7 +81,7 @@ export default function SpeciesVisualization() {
     <div className="container mx-auto lg:px-6 py-8">
       <Card className="w-full">
         <CardHeader className="flex flex-col sm:flex-row items-center justify-between">
-          <CardTitle className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">
+          <CardTitle className="text-2xl font-bold text-gray-800 mb-4 md:mb-0">
             Species Visualization
           </CardTitle>
           <div className="flex items-center space-x-2 lg:space-x-4">

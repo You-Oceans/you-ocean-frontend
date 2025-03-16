@@ -71,8 +71,8 @@ export default function App() {
         <SpeciesVisualization />
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Detection Statistics</h2>
+      <div className="bg-white rounded-lg shadow-md p-6 ">
+        <h2 className="text-2xl font-bold mb-4 ">Detection Statistics</h2>
 
         <div className="flex flex-wrap justify-center gap-4 mb-8">
           <Button
@@ -95,6 +95,8 @@ export default function App() {
           <div className="flex justify-center mt-4 mb-8">
             <DateSelector
               date={selectedDate || undefined}
+              minDate={new Date(2024, 0, 1)}
+              maxDate={new Date(2024, 6, 31)}
               onDateChange={(date) => {
                 if (date) {
                   setSelectedDate(date);
