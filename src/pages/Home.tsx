@@ -71,8 +71,8 @@ export default function App() {
         <SpeciesVisualization />
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Detection Statistics</h2>
+      <div className="bg-white rounded-lg shadow-md p-6 ">
+        <h2 className="text-2xl font-bold mb-4 ">Detection Statistics</h2>
 
         <div className="flex flex-wrap justify-center gap-4 mb-8">
           <Button
