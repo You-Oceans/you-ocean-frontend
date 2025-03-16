@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import SpeciesVisualization from "@/components/SpeciesVisualization";
 import { DateSelector } from "@/components/DateSelector";
 import MonthSelector from "@/components/MonthSelector";
+import SpeciesVisualization from "@/components/SpeciesVisualization";
 import StatisticsDashboard from "@/components/StaticsDashBoard";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 
 export default function App() {
   const [data, setData] = useState<any[] | null>(null);
@@ -67,10 +67,6 @@ export default function App() {
 
   return (
     <div className="container mx-auto pb-4 space-y-4">
-      <div className="rounded-lg shadow-md px-6 py-2">
-        <SpeciesVisualization />
-      </div>
-
       <div className="bg-white rounded-lg shadow-md p-6 ">
         <h2 className="text-2xl font-bold mb-4 ">Detection Statistics</h2>
 
@@ -126,6 +122,9 @@ export default function App() {
             Select a time period to view detection statistics
           </div>
         )}
+      </div>
+      <div className="rounded-lg shadow-md px-6 py-2">
+        <SpeciesVisualization />
       </div>
     </div>
   );
