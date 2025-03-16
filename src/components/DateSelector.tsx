@@ -27,7 +27,7 @@ import {
 } from "./ui/select";
 
 interface DateSelectorProps {
-  date?: Date;
+  date?: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
   minDate: Date;
   maxDate: Date;

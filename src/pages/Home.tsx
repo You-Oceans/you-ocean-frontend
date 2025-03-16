@@ -95,6 +95,8 @@ export default function App() {
           <div className="flex justify-center mt-4 mb-8">
             <DateSelector
               date={selectedDate || undefined}
+              minDate={new Date(2024, 0, 1)}
+              maxDate={new Date(2024, 6, 31)}
               onDateChange={(date) => {
                 if (date) {
                   setSelectedDate(date);
