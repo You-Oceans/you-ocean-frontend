@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 const navigationItems = [
   { title: "Explore", href: "/" },
-  { title: "Dashboard", href: "/dashboard" },
+  { title: "Dashboard", href: "/explore" },
   { title: "Compare", href: "/compare" },
   // { title: "About", href: "/about" },
   // { title: "Contact", href: "/contact" },
@@ -100,19 +100,14 @@ export function Navbar() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
+                    variant="outline"
+                    className="flex items-center gap-2 p-3 rounded-lg "
                   >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        src={user?.profileImage}
-                        alt={user?.email || "User avatar"}
-                        className="object-cover"
-                      />
-                      <AvatarFallback>
-                        {user?.name?.charAt(0) || "U"}
-                      </AvatarFallback>
+                    <Avatar className="h-5 w-5"> 
+                      <AvatarImage src={user?.profileImage} />
+                      <AvatarFallback>{user?.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
+                    <span className="text-sm font-medium">{user?.name}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>

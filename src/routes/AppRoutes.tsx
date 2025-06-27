@@ -9,10 +9,9 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { Navbar } from "@/components/Layout/Navbar";
 import Profile from "@/pages/Profile";
 import ProfileEdit from "@/pages/ProfileEdit";
-import Map from "@/pages/Map";
+import Dashboard from "@/pages/dashboard/Dashboard";
 const AppRoutes = () => {
   const { setAuthFromCookie } = useAuthStore();
-
   useEffect(() => {
     setAuthFromCookie();
   }, [setAuthFromCookie]);
@@ -27,12 +26,12 @@ const AppRoutes = () => {
           path="/"
           element={
             <PrivateRoute>
-              <Map />
+              <Dashboard />
             </PrivateRoute>
           }
         />
         <Route
-          path="/dashboard"
+          path="/explore"
           element={
             <PrivateRoute>
               <Home />
