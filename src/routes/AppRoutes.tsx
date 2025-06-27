@@ -9,7 +9,6 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { Navbar } from "@/components/Layout/Navbar";
 import Profile from "@/pages/Profile";
 import ProfileEdit from "@/pages/ProfileEdit";
-import Footer from "@/components/Layout/Footer";
 import Map from "@/pages/Map";
 const AppRoutes = () => {
   const { setAuthFromCookie } = useAuthStore();
@@ -24,8 +23,22 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/" element={<Map />} />
-        <Route path="/search" element={<Home />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Map />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/profile"
           element={
@@ -44,7 +57,6 @@ const AppRoutes = () => {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Footer />
     </Router>
   );
 };

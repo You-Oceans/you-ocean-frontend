@@ -1,6 +1,5 @@
 import { Menu } from "lucide-react";
-import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   NavigationMenu,
@@ -18,20 +17,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 const navigationItems = [
-  { title: "Home", href: "/" },
-  { title: "Search", href: "/search" },
-  { title: "About", href: "/about" },
-  { title: "Contact", href: "/contact" },
+  { title: "Explore", href: "/" },
+  { title: "Dashboard", href: "/dashboard" },
+  { title: "Compare", href: "/compare" },
+  // { title: "About", href: "/about" },
+  // { title: "Contact", href: "/contact" },
 ];
 
 export function Navbar() {
   const { isAuthenticated: isLoggedIn, logout, user } = useAuthStore();
-
+  const currentPath = useLocation();
+  const isActive = (path: string) => currentPath.pathname === path;
   return (
     <header className="sticky top-0 z-50 w-full  border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between px-4  lg:px-12">
+      <div className=" flex h-14 items-center justify-between px-4  lg:px-12">
         <div className="flex items-center md:w-1/4">
           <Link to="/" className="font-bold text-primary text-lg">
             YOUOCEANS
@@ -40,15 +40,13 @@ export function Navbar() {
 
         <div className="hidden md:flex md:flex-1 md:justify-center">
           <NavigationMenu>
-            <NavigationMenuList className="flex space-x-6">
+            <NavigationMenuList className="flex gap-10">
               {navigationItems.map((item) => (
                 <NavigationMenuItem key={item.title}>
                   <NavigationMenuLink asChild>
                     <Link
                       to={item.href}
-                      className={cn(
-                        "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
-                      )}
+                      className={`${isActive(item.href) ? "text-foreground" : "text-muted-foreground"}`}
                     >
                       {item.title}
                     </Link>
