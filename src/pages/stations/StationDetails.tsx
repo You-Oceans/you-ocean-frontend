@@ -4,6 +4,24 @@ import { Button } from "@/components/ui/button";
 import { BellRing, Bookmark } from "lucide-react";
 export default function StationDetails() {
   const { stationId } = useParams();
+  const stationStats = [
+    {
+      label: "Top species",
+      value: "Blue whale (162 calls)",
+    },
+    {
+      label: "Total calls (last 7 days)",
+      value: "162 calls",
+    },
+    {
+      label: "Noise level",
+      value: "Avg 100 dB",
+    },
+    {
+      label: "Last updated",
+      value: "2 Hours ago",
+    },
+  ];
   return (
     <div className="px-4 lg:px-32 py-6 lg:py-10 flex flex-col gap-6">
       <button className="flex flex-row items-center gap-2">
@@ -60,8 +78,26 @@ export default function StationDetails() {
                 </section>
               </section>
               <section className="flex flex-row items-center gap-12">
-
+                {stationStats.map((stat) => (
+                  <section className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium">{stat.label}</span>
+                    <span className="text-sm font-normal text-foreground">
+                      {stat.value}
+                    </span>
+                  </section>
+                ))}
               </section>
+            </section>
+            <section className="flex flex-row items-center gap-1.5">
+              <Button variant={"default"} className="rounded-full">
+                Weekly Stats
+              </Button>
+              <Button variant={"outline"} className="rounded-full">
+                Monthly Stats
+              </Button>
+              <Button variant={"outline"} className="rounded-full">
+                Custom Range
+              </Button>
             </section>
           </section>
         </section>
