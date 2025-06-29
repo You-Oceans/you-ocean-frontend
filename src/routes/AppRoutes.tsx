@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { Navbar } from "@/components/Layout/Navbar";
 import Profile from "@/pages/Profile";
+import StationDetails from "@/pages/stations/StationDetails";
 import ProfileEdit from "@/pages/ProfileEdit";
 import Dashboard from "@/pages/dashboard/Dashboard";
 const AppRoutes = () => {
@@ -28,6 +29,14 @@ const AppRoutes = () => {
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/stations/:stationId"
+          element={
+            // <PrivateRoute>
+              <StationDetails />
+            // </PrivateRoute>
           }
         />
         <Route
