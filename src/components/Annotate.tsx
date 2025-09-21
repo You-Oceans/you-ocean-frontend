@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { X, Calendar, Play, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Trash2, Download } from 'lucide-react';
 import { Delete } from './icons/Delete';
 import { format, isBefore, isAfter } from "date-fns";
@@ -42,6 +43,7 @@ export default function Annotate() {
     species: '',
     callType: ''
   });
+  const [customCallType, setCustomCallType] = useState('');
 
   const minDate = new Date(2023, 0, 1);
   const maxDate = new Date(2026, 6, 31);
@@ -148,6 +150,9 @@ export default function Annotate() {
   const handleAnnotationSubmit = () => {
     if (!currentRect) return;
     
+    // Use custom call type if "other" is selected, otherwise use the selected value
+    const finalCallType = formData.callType === 'other' ? customCallType : formData.callType;
+    
     const newAnnotation: Annotation = {
       id: Date.now().toString(),
       x: Math.min(currentRect.x, currentRect.x + currentRect.width),
@@ -157,7 +162,7 @@ export default function Annotate() {
       label: formData.label,
       description: formData.description,
       species: formData.species,
-      callType: formData.callType,
+      callType: finalCallType,
       status: 'pending'
     };
     
@@ -165,6 +170,7 @@ export default function Annotate() {
     setCurrentRect(null);
     setShowAnnotationForm(false);
     setFormData({ label: '', description: '', species: '', callType: '' });
+    setCustomCallType('');
     
     // Log coordinates to console
     console.log('Annotation created:', {
@@ -179,7 +185,7 @@ export default function Annotate() {
         label: newAnnotation.label,
         description: newAnnotation.description,
         species: newAnnotation.species,
-        callType: newAnnotation.callType
+        callType: finalCallType
       }
     });
   };
@@ -742,12 +748,10 @@ export default function Annotate() {
                         <SelectValue placeholder="Select" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:350" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="blue-a-whale">Blue A Whale</SelectItem>
-                        <SelectItem value="blue-b-whale">Blue B Whale</SelectItem>
+                        <SelectItem value="blue-whale">Blue Whale</SelectItem>
                         <SelectItem value="humpback-whale">Humpback Whale</SelectItem>
                         <SelectItem value="fin-whale">Fin Whale</SelectItem>
-                        <SelectItem value="ship">Ship</SelectItem>
-                        <SelectItem value="earthquake">Earthquake</SelectItem>
+                        <SelectItem value="ship">Gray Whale</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -757,15 +761,39 @@ export default function Annotate() {
                     <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:356">
                       Call Type
                     </div>
-                    <Select value={formData.callType} onValueChange={(value) => setFormData(prev => ({ ...prev, callType: value }))}>
+                    <Select value={formData.callType} onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, callType: value }));
+                      if (value !== 'other') {
+                        setCustomCallType('');
+                      }
+                    }}>
                       <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]" data-node-id="152:357">
-                        <SelectValue placeholder="Select" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:358" />
+                        <SelectValue placeholder="Select call type" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:358" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="song">Song</SelectItem>
-                        <SelectItem value="general-sound">General Sound</SelectItem>
+                        <SelectItem value="call">Call</SelectItem>
+                        <SelectItem value="click">Click</SelectItem>
+                        <SelectItem value="whistle">Whistle</SelectItem>
+                        <SelectItem value="burst">Burst</SelectItem>
+                        <SelectItem value="moan">Moan</SelectItem>
+                        <SelectItem value="grunt">Grunt</SelectItem>
+                        <SelectItem value="tonal">Tonal</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
+                    
+                    {/* Custom Call Type Input - shown when "Other" is selected */}
+                    {formData.callType === 'other' && (
+                      <div className="w-full mt-2">
+                        <Input
+                          placeholder="Enter custom call type"
+                          value={customCallType}
+                          onChange={(e) => setCustomCallType(e.target.value)}
+                          className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] px-[12px] font-normal text-[14px] text-[#131a24] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-blue-500 transition-colors"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 
