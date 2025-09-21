@@ -1,30 +1,11 @@
 import * as React from "react";
-import {
-  format,
-  getMonth,
-  getYear,
-  setMonth,
-  setYear,
-  isBefore,
-  isAfter,
-} from "date-fns";
+import { format, isBefore, isAfter } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+
 
 interface DateSelectorProps {
   date?: Date | undefined;
@@ -36,125 +17,47 @@ interface DateSelectorProps {
 export function DateSelector({
   date = new Date(2024, 6, 1),
   onDateChange,
+  minDate = new Date(2024, 0, 1),
+  maxDate = new Date(2024, 6, 31),
 }: DateSelectorProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [tempDate, setTempDate] = React.useState<Date>(date);
-
-  const allowedMonths = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-  ];
-
-  const startDate = new Date(2024, 0, 1);
-  const endDate = new Date(2024, 6, 31);
-  const isDateValid =
-    !isBefore(tempDate, startDate) && !isAfter(tempDate, endDate);
-
-  const handleMonthSelect = (month: string) => {
-    const newDate = setMonth(tempDate, allowedMonths.indexOf(month));
-    if (!isBefore(newDate, startDate) && !isAfter(newDate, endDate)) {
-      setTempDate(newDate);
-    }
-  };
+  const [selectedDate, setSelectedDate] = React.useState<Date>(date);
 
   const handleDateSelect = (newDate: Date | undefined) => {
-    if (
-      newDate &&
-      !isBefore(newDate, startDate) &&
-      !isAfter(newDate, endDate)
-    ) {
-      setTempDate(newDate);
-    }
-  };
-
-  const handleConfirm = () => {
-    if (!isBefore(tempDate, startDate) && !isAfter(tempDate, endDate)) {
-      onDateChange(tempDate);
-      setIsOpen(false);
+    if (newDate && !isBefore(newDate, minDate) && !isAfter(newDate, maxDate)) {
+      setSelectedDate(newDate);
+      onDateChange(newDate);
     }
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[200px] lg:w-[240px] justify-start text-left font-normal",
-            !tempDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {tempDate ? format(tempDate, "PPP") : <span>Select date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <div className="flex justify-between p-2">
-          <Select
-            onValueChange={handleMonthSelect}
-            value={allowedMonths[getMonth(tempDate)]}
-          >
-            <SelectTrigger className="w-[110px]">
-              <SelectValue placeholder="Month" />
-            </SelectTrigger>
-            <SelectContent>
-              {allowedMonths.map((month) => (
-                <SelectItem key={month} value={month}>
-                  {month}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            onValueChange={(year) =>
-              setTempDate(setYear(tempDate, parseInt(year)))
-            }
-            value={getYear(tempDate).toString()} // Ensure it's a string
-          >
-            <SelectTrigger className="w-[110px]">
-              <SelectValue placeholder="Year" />
-            </SelectTrigger>
-            <SelectContent>
-              {[2024].map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="flex flex-col">
+     
+      <Button
+        variant="outline"
+        className={cn(
+          "w-[280px] justify-between text-left font-normal bg-white hover:bg-gray-50 border-gray-200 transition-colors",
+          !selectedDate && "text-muted-foreground"
+        )}
+      >
+        <div className="flex items-center">
+          <CalendarIcon className="mr-3 h-4 w-4 text-gray-500" />
+          <span className="text-sm">
+            {selectedDate
+              ? format(selectedDate, "EEEE, MMMM d, yyyy")
+              : "Select a date"}
+          </span>
         </div>
-
+      </Button>
+      <div className="p-4">
         <Calendar
           mode="single"
-          selected={tempDate}
+          selected={selectedDate}
           onSelect={handleDateSelect}
           initialFocus
-          month={tempDate}
-          onMonthChange={setTempDate}
-          disabled={(date) =>
-            isBefore(date, startDate) || isAfter(date, endDate)
-          }
+          disabled={(date) => isBefore(date, minDate) || isAfter(date, maxDate)}
+          className="rounded-md"
         />
-
-        <div className="flex justify-end p-2">
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!isDateValid}
-            variant="default"
-            onClick={handleConfirm}
-            className="ml-2"
-          >
-            Confirm
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
   );
 }

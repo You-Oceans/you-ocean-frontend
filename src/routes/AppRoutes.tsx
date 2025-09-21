@@ -8,12 +8,12 @@ import { useEffect } from "react";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { Navbar } from "@/components/Layout/Navbar";
 import Profile from "@/pages/Profile";
+import StationDetails from "@/pages/stations/StationDetails";
 import ProfileEdit from "@/pages/ProfileEdit";
-import Footer from "@/components/Layout/Footer";
-import Map from "@/pages/Map";
+import Dashboard from "@/pages/dashboard/Dashboard";
+import Annotate from "@/components/Annotate";
 const AppRoutes = () => {
   const { setAuthFromCookie } = useAuthStore();
-
   useEffect(() => {
     setAuthFromCookie();
   }, [setAuthFromCookie]);
@@ -24,8 +24,38 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/" element={<Map />} />
-        <Route path="/search" element={<Home />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/annotate"
+          element={
+            <PrivateRoute>
+              <Annotate />
+            // </PrivateRoute>
+          }
+        />
+        <Route
+          path="/stations/:stationId"
+          element={
+            // <PrivateRoute>
+              <StationDetails />
+            // </PrivateRoute>
+          }
+        />
+        <Route
+          path="/explore"
+          element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          }
+        />
         <Route
           path="/profile"
           element={
@@ -44,7 +74,6 @@ const AppRoutes = () => {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
-      <Footer />
     </Router>
   );
 };
