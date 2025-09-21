@@ -5,31 +5,34 @@ import { useEffect, useState } from "react";
 // Components
 import StatisticsDashboard from "@/components/StaticsDashBoard";
 import SpeciesVisualization from "@/components/SpeciesVisualization";
-import TrendVisualization from "@/components/TrendVisualization";
-import { SpeciesSelector } from "@/components/SpeciesSelector";
-import AggregatedStats from "@/components/AggregateStats";
+// import TrendVisualization from "@/components/TrendVisualization";
+// import { SpeciesSelector } from "@/components/SpeciesSelector";
+// import AggregatedStats from "@/components/AggregateStats";
 import { HydrophoneStation } from "@/components/HydrophoneStation";
 
 // Utilities
 import { fetchData, type FetchDataParams } from "@/utilis/dataService";
 import { getDefaultWeekDate } from "@/utilis/dateUtils";
-import { extractUniqueSpecies, initializeSelectedSpecies } from "@/utilis/dataProcessing";
+import {
+  extractUniqueSpecies,
+  initializeSelectedSpecies,
+} from "@/utilis/dataProcessing";
 
 export default function App() {
   const [data, setData] = useState<any[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [timeframe, setTimeframe] = useState<"week" | "month" | "custom">(
-    "month"
-  );
-  const [allSpecies, setAllSpecies] = useState<string[]>([]);
+  // const [timeframe, setTimeframe] = useState<"week" | "month" | "custom">(
+  //   "month"
+  // );
+  // const [allSpecies, setAllSpecies] = useState<string[]>([]);
   const [selectedSpecies, setSelectedSpecies] = useState<string[]>([]);
-  const [currentCustomRange, setCurrentCustomRange] = useState<{
-    startDate: string;
-    endDate: string;
-  }>({
-    startDate: "2024-01-01",
-    endDate: "2026-07-31",
-  });
+  // const [currentCustomRange, setCurrentCustomRange] = useState<{
+  //   startDate: string;
+  //   endDate: string;
+  // }>({
+  //   startDate: "2024-01-01",
+  //   endDate: "2026-07-31",
+  // });
 
   // Initialize with default month data
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function App() {
   useEffect(() => {
     if (data && data.length > 0) {
       const species = extractUniqueSpecies(data);
-      setAllSpecies(species);
+      // setAllSpecies(species);
       setSelectedSpecies(initializeSelectedSpecies(species, selectedSpecies));
     }
   }, [data]);
@@ -52,7 +55,7 @@ export default function App() {
     selectedMonth?: { month: number; year: number },
     customDates?: { startDate: string; endDate: string }
   ) => {
-    setTimeframe(timeframe);
+    // setTimeframe(timeframe);
     setLoading(true);
 
     // Handle week timeframe with default date
@@ -64,7 +67,7 @@ export default function App() {
 
     // Store custom range for trend analysis
     if (timeframe === "custom" && customDates) {
-      setCurrentCustomRange(customDates);
+      // setCurrentCustomRange(customDates);
     }
 
     try {
@@ -75,7 +78,7 @@ export default function App() {
         customDates,
       };
       const result = await fetchData(params);
-      
+
       // Ensure result is always an array
       if (Array.isArray(result)) {
         setData(result);
@@ -92,83 +95,46 @@ export default function App() {
   };
 
   // Handler for species selection changes
-  const handleSpeciesChange = (species: string[]) => {
-    setSelectedSpecies(species);
-  };
+  // const handleSpeciesChange = (species: string[]) => {
+  //   setSelectedSpecies(species);
+  // };
 
   return (
-    <div className="container mx-auto pb-4 space-y-4">
-      {/* Hydrophone Station Section */}
-      <div className="bg-white  p-6">
+    <div className="container mx-auto flex flex-col pb-4 gap-10">
+    
         <HydrophoneStation onTimeframeChange={handleFetchData} />
-      </div>
+     
 
-      <div className="bg-white rounded-lg shadow-md p-6 ">
-        <h2 className="text-2xl font-bold mb-4">Detection Statistics</h2>
-
-        {loading && (
-          <div className="text-center p-8">
-            <div className="inline-flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="text-gray-500">Loading statistics...</span>
-            </div>
+      {loading && (
+        <div className="text-center p-8">
+          <div className="inline-flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-gray-500">Loading statistics...</span>
           </div>
-        )}
-
-        {!loading && data && data.length > 0 && <StatisticsDashboard data={data} />}
-
-        {!loading && data && data.length === 0 && (
-          <div className="text-center p-8 text-gray-500">
-            No data found for the selected time period
-          </div>
-        )}
-
-        {!loading && !data && (
-          <div className="text-center p-8 text-gray-500">
-            Select a time period to view detection statistics
-          </div>
-        )}
-      </div>
-
-      {/* Trend Analysis for Custom Date Range */}
-      {timeframe === "custom" && data && data.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-4">Trend Analysis</h2>
-            <p className="text-gray-500">
-              Visualize trends for your selected date range from{" "}
-              {currentCustomRange.startDate} to {currentCustomRange.endDate}
-            </p>
-          </div>
-
-          {allSpecies.length > 0 && (
-            <div className="mb-6">
-              <SpeciesSelector
-                species={allSpecies}
-                selectedSpecies={selectedSpecies}
-                onSpeciesChange={handleSpeciesChange}
-              />
-            </div>
-          )}
-
-          <TrendVisualization
-            data={data}
-            startDate={currentCustomRange.startDate}
-            endDate={currentCustomRange.endDate}
-            selectedSpecies={selectedSpecies}
-          />
-          <AggregatedStats
-            data={data}
-            startDate={currentCustomRange.startDate}
-            endDate={currentCustomRange.endDate}
-            selectedSpecies={selectedSpecies}
-          />
         </div>
       )}
 
-      <div className="rounded-lg shadow-md px-6 py-2">
+      {!loading && data && data.length > 0 && (
+        <StatisticsDashboard data={data} />
+      )}
+
+      {!loading && data && data.length === 0 && (
+        <div className="text-center p-8 text-gray-500">
+          No data found for the selected time period
+        </div>
+      )}
+
+      {!loading && !data && (
+        <div className="text-center p-8 text-gray-500">
+          Select a time period to view detection statistics
+        </div>
+      )}
+
+   
+
+     
         <SpeciesVisualization />
-      </div>
+     
     </div>
   );
 }

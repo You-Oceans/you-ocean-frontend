@@ -2,7 +2,7 @@ import { Bell, Save, MapPin, Radio, Volume2, Clock, Calendar, Edit } from "lucid
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -118,7 +118,7 @@ export function HydrophoneStation({
     }
   };
   return (
-    <div className="flex w-full max-w-7xl mx-auto my-10 border pl-5 rounded-md bg-background gap-6">
+    <div className="flex w-full max-w-7xl mx-auto  border pl-5 rounded-md bg-background gap-6">
       {/* Left Panel - Station Information */}
       <div className="flex-1  space-y-6">
         <Card className="border-0 shadow-none">
