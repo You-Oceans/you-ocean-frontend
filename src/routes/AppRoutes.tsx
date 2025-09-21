@@ -35,7 +35,7 @@ const AppRoutes = () => {
         <Route
           path="/annotate"
           element={
-            // <PrivateRoute>
+            <PrivateRoute>
               <Annotate />
             // </PrivateRoute>
           }

@@ -53,7 +53,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
           onChange={handleStartDateChange}
           className="border rounded p-1 px-4 cursor-pointer"
           min="2024-01-01"
-          max="2024-07-31"
+          max="2026-07-31"
         />
       </div>
 

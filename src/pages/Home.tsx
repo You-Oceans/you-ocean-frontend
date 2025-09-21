@@ -26,7 +26,7 @@ export default function App() {
     endDate: string;
   }>({
     startDate: "2024-01-01",
-    endDate: "2024-07-31",
+    endDate: "2026-07-31",
   });
 
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function App() {
             <DateSelector
               date={selectedDate || undefined}
               minDate={new Date(2024, 0, 1)}
-              maxDate={new Date(2024, 6, 31)}
+              maxDate={new Date(2026, 6, 31)}
               onDateChange={(date) => {
                 if (date) {
                   setSelectedDate(date);

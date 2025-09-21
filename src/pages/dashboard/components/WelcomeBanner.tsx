@@ -2,7 +2,7 @@ import { useAuthStore } from "@/hooks/useAuthStore";
 import { formatDate } from "@/utilis/helperFunctions";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, ArrowUp } from "lucide-react";
-
+import { Link } from "react-router-dom";
 export default function WelcomeBanner() {
   const { user } = useAuthStore();
   return (
@@ -14,9 +14,11 @@ export default function WelcomeBanner() {
         </p>
       </div>
       <div className="flex flex-row gap-2">
-        <Button variant="outline" className="flex items-center gap-2"> 
+        <Button variant="outline" className="flex items-center gap-2">
+          <Link to="/annotate" className="flex">
             Spectogram Viewer
             <ArrowUpRight className="w-4 h-4" />
+          </Link>
         </Button>
         <Button variant="outline" className="flex items-center gap-2"> 
             Upload Data

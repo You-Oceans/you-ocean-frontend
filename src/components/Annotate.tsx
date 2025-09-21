@@ -1,11 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Square } from 'lucide-react';
+import { X, Calendar, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DateSelector } from './DateSelector';
+import { Delete } from './icons/Delete';
 
 interface Annotation {
   id: string;
@@ -24,9 +23,10 @@ export default function Annotate() {
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentRect, setCurrentRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [selectedAnnotation, setSelectedAnnotation] = useState<Annotation | null>(null);
   const [showLayers] = useState({ ai: true, approved: true, pending: true });
   const [showAnnotationForm, setShowAnnotationForm] = useState(false);
+  const [date, setDate] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     label: '',
     description: '',
@@ -39,6 +39,19 @@ export default function Annotate() {
 
   // Sample image URL - replace with your actual image
   const sampleImageUrl = '/download.png';
+
+  // Simulate API call when date is selected
+  const handleDateSelect = async (selectedDate: Date) => {
+    setDate(selectedDate);
+    setIsLoading(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Simulate loading some data based on the date
+    console.log('Loading data for date:', selectedDate);
+    setIsLoading(false);
+  };
 
   const startDrawing = useCallback((e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -116,20 +129,19 @@ export default function Annotate() {
   };
 
   const handleAnnotationClick = (annotation: Annotation) => {
-    setSelectedAnnotation(annotation);
+    console.log('Annotation clicked:', annotation);
   };
 
   const deleteAnnotation = (id: string) => {
     setAnnotations(prev => prev.filter(ann => ann.id !== id));
-    setSelectedAnnotation(null);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-500';
-      case 'ai': return 'bg-gray-500';
-      case 'pending': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+      case 'approved': return 'bg-[#248600]';
+      case 'ai': return 'bg-[#5e6166]';
+      case 'pending': return 'bg-[#0078e8]';
+      default: return 'bg-[#5e6166]';
     }
   };
 
@@ -144,258 +156,274 @@ export default function Annotate() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <nav className="text-sm text-gray-500 mb-2">
-              Hydrophone Station &gt; Spectrogram Viewer
-            </nav>
-            <h1 className="text-2xl font-bold text-gray-900">Spectrogram Viewer</h1>
-            <p className="text-gray-600">Manually label marine mammal sound signatures</p>
-          </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            Submit for review
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex h-[calc(100vh-120px)]">
+      <div className="flex h-[calc(100vh-80px)]">
         {/* Main Content */}
         <div className="flex-1 p-6">
-          {/* Clip Navigation */}
+          {/* Date Selector */}
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <h2 className="text-lg font-semibold">Clip 1 - Ultra-Low Band (0-50 Hz)</h2>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    <Square className="w-4 h-4 mr-2" />
-                    Play
-                  </Button>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">&lt;</Button>
-                <span className="text-sm text-gray-600">Clip 1 of 50</span>
-                <Button variant="outline" size="sm">&gt;</Button>
-              </div>
-            </div>
-            
-            {/* Band Selection */}
-            <div className="flex gap-2">
-              {['Ultra-Low', 'Low', 'Mid', 'High', 'Ultra-High'].map((band) => (
-                <Button
-                  key={band}
-                  variant={band === 'Ultra-Low' ? 'default' : 'outline'}
-                  size="sm"
-                  className="rounded-full"
-                >
-                  {band}
-                </Button>
-              ))}
-            </div>
+            <DateSelector 
+              date={date || undefined} 
+              onDateChange={(newDate) => {
+                if (newDate) {
+                  handleDateSelect(newDate);
+                }
+              }}
+              minDate={new Date(2024, 0, 1)}
+              maxDate={new Date(2024, 6, 31)}
+            />
           </div>
 
-          {/* Image Container */}
-          <div className="relative bg-white border rounded-lg overflow-hidden">
-            <div
-              ref={containerRef}
-              className="relative cursor-crosshair"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-            >
-              <img
-                ref={imageRef}
-                src={sampleImageUrl}
-                alt="Spectrogram"
-                className="w-full h-[500px] object-cover"
-                draggable={false}
-              />
-              
-              {/* Frequency Labels */}
-              <div className="absolute left-2 top-2 text-xs font-medium text-gray-600">HIGH</div>
-              <div className="absolute left-2 bottom-2 text-xs font-medium text-gray-600">LOW</div>
-              
-              {/* Time Labels */}
-              <div className="absolute bottom-2 left-4 text-xs text-gray-600">0s</div>
-              <div className="absolute bottom-2 left-1/4 text-xs text-gray-600">15s</div>
-              <div className="absolute bottom-2 left-1/2 text-xs text-gray-600">30s</div>
-              <div className="absolute bottom-2 left-3/4 text-xs text-gray-600">45s</div>
-              <div className="absolute bottom-2 right-4 text-xs text-gray-600">60s</div>
-
-              {/* Existing Annotations */}
-              {annotations.map((annotation) => {
-                if (!showLayers[annotation.status as keyof typeof showLayers]) return null;
+          {/* Conditional Content */}
+          {!date ? (
+            <div className="flex-1 flex items-center justify-center h-96">
+              <div className="text-center">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a date first to visualize</h3>
+                <p className="text-gray-500">Choose a date to load spectrogram data for annotation</p>
+              </div>
+            </div>
+          ) : isLoading ? (
+            <div className="flex-1 flex items-center justify-center h-96">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading spectrogram data...</p>
+              </div>
+            </div>
+          ) : (
+            <Card className="w-full">
+              <CardContent className="p-6">
+                {/* Clip Navigation */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold">Clip 1 - Ultra-Low Band (0-50 Hz)</h2>
+                    <Button variant="outline" size="sm">
+                      <Play className="w-4 h-4 mr-2" />
+                      Play
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-gray-600">Clip 1 of 50</span>
+                    <Button variant="outline" size="sm">
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
                 
-                return (
-                  <div
-                    key={annotation.id}
-                    className={`absolute border-2 ${getStatusColor(annotation.status)} border-opacity-70 bg-${getStatusColor(annotation.status)} bg-opacity-20 cursor-pointer hover:bg-opacity-30`}
-                    style={{
-                      left: annotation.x,
-                      top: annotation.y,
-                      width: annotation.width,
-                      height: annotation.height,
-                    }}
-                    onClick={() => handleAnnotationClick(annotation)}
-                  >
-                    <div className="absolute -top-6 left-0 text-xs bg-black bg-opacity-75 text-white px-2 py-1 rounded">
-                      {annotation.label || 'Unlabeled'}
+                {/* Band Selection */}
+                <div className="flex gap-2 mb-6">
+                  {['Ultra-Low', 'Low', 'Mid', 'High', 'Ultra-High'].map((band) => (
+                    <Button
+                      key={band}
+                      variant={band === 'Ultra-Low' ? 'default' : 'outline'}
+                      size="sm"
+                      className="rounded-full"
+                    >
+                      {band}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Spectrogram Image Container */}
+                <div className="relative bg-white border rounded-lg overflow-hidden h-[500px]">
+                  <div className="flex h-full">
+                    {/* Frequency Labels */}
+                    <div className="flex flex-col justify-between p-2 w-12 border-r text-xs text-gray-500">
+                      <span>HIGH</span>
+                      <span>LOW</span>
+                    </div>
+                    
+                    {/* Main Image Area */}
+                    <div 
+                      ref={containerRef}
+                      className="flex-1 relative cursor-crosshair"
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={stopDrawing}
+                      onMouseLeave={stopDrawing}
+                    >
+                      <img
+                        ref={imageRef}
+                        src={sampleImageUrl}
+                        alt="Spectrogram"
+                        className="w-full h-full object-contain"
+                        draggable={false}
+                      />
+
+                      {/* Existing Annotations */}
+                      {annotations.map((annotation) => {
+                        if (!showLayers[annotation.status as keyof typeof showLayers]) return null;
+                        
+                        return (
+                          <div
+                            key={annotation.id}
+                            className={`absolute border-2 ${getStatusColor(annotation.status)} border-opacity-70 bg-${getStatusColor(annotation.status)} bg-opacity-20 cursor-pointer hover:bg-opacity-30`}
+                            style={{
+                              left: annotation.x,
+                              top: annotation.y,
+                              width: annotation.width,
+                              height: annotation.height,
+                            }}
+                            onClick={() => handleAnnotationClick(annotation)}
+                          >
+                            <div className="absolute -top-6 left-0 text-xs bg-black bg-opacity-75 text-white px-2 py-1 rounded">
+                              {annotation.species || 'Unlabeled'}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Current Drawing Rectangle */}
+                      {currentRect && (
+                        <div
+                          className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20"
+                          style={{
+                            left: Math.min(currentRect.x, currentRect.x + currentRect.width),
+                            top: Math.min(currentRect.y, currentRect.y + currentRect.height),
+                            width: Math.abs(currentRect.width),
+                            height: Math.abs(currentRect.height),
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
-                );
-              })}
+                  
+                  {/* Time Labels */}
+                  <div className="absolute bottom-2 left-4 text-xs text-gray-600">0s</div>
+                  <div className="absolute bottom-2 left-1/4 text-xs text-gray-600">15s</div>
+                  <div className="absolute bottom-2 left-1/2 text-xs text-gray-600">30s</div>
+                  <div className="absolute bottom-2 left-3/4 text-xs text-gray-600">45s</div>
+                  <div className="absolute bottom-2 right-4 text-xs text-gray-600">60s</div>
 
-              {/* Current Drawing Rectangle */}
-              {currentRect && (
-                <div
-                  className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20"
-                  style={{
-                    left: Math.min(currentRect.x, currentRect.x + currentRect.width),
-                    top: Math.min(currentRect.y, currentRect.y + currentRect.height),
-                    width: Math.abs(currentRect.width),
-                    height: Math.abs(currentRect.height),
-                  }}
-                />
-              )}
-            </div>
-
-            {/* Show Layers Legend */}
-            <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-3 py-2 rounded">
-              <div className="text-xs mb-1">Show layers:</div>
-              <div className="flex gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                  <span>AI Annotations</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>Approved</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Pending</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="w-80 bg-white border-l p-6">
-          <h3 className="text-lg font-semibold mb-6">Annotations</h3>
-          
-          {/* Annotation Form */}
-          {showAnnotationForm && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="text-sm">Edit Annotation</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="species">Species</Label>
-                  <Select value={formData.species} onValueChange={(value) => setFormData(prev => ({ ...prev, species: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="blue-whale">Blue Whale</SelectItem>
-                      <SelectItem value="humpback-whale">Humpback Whale</SelectItem>
-                      <SelectItem value="fin-whale">Fin Whale</SelectItem>
-                      <SelectItem value="gray-whale">Gray Whale</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="callType">Call Type</Label>
-                  <Select value={formData.callType} onValueChange={(value) => setFormData(prev => ({ ...prev, callType: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="song">Song</SelectItem>
-                      <SelectItem value="call">Call</SelectItem>
-                      <SelectItem value="click">Click</SelectItem>
-                      <SelectItem value="whistle">Whistle</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="label">Label</Label>
-                  <Input
-                    id="label"
-                    value={formData.label}
-                    onChange={(e) => setFormData(prev => ({ ...prev, label: e.target.value }))}
-                    placeholder="Enter label"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Enter description"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button onClick={handleAnnotationSubmit} className="flex-1">
-                    Done
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowAnnotationForm(false)}>
-                    <X className="w-4 h-4" />
-                  </Button>
+                  {/* Show Layers Legend */}
+                  <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-3 py-2 rounded">
+                    <div className="text-xs mb-1">Show layers:</div>
+                    <div className="flex gap-4 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        <span>AI Annotations</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span>Approved</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span>Pending</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           )}
+        </div>
 
-          {/* Annotations List */}
-          <div className="space-y-3">
-            {annotations.map((annotation) => (
-              <Card 
-                key={annotation.id} 
-                className={`cursor-pointer transition-colors ${selectedAnnotation?.id === annotation.id ? 'ring-2 ring-blue-500' : ''}`}
-                onClick={() => handleAnnotationClick(annotation)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`w-1 h-12 ${getStatusColor(annotation.status)} rounded-full`}></div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">
-                        {annotation.label || `${annotation.species} - ${annotation.callType}`}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {getStatusLabel(annotation.status)}
-                      </div>
-                      {annotation.description && (
-                        <div className="text-xs text-gray-600 mt-1">
-                          {annotation.description}
-                        </div>
-                      )}
+        {/* Sidebar - Exact Figma Design */}
+        <div className="bg-white relative w-[427px] h-full border-l border-[#ebeef5]" data-node-id="152:342">
+          <div className="flex flex-col gap-[24px] items-start p-[18px] h-full">
+            {/* Title */}
+            <div className="font-medium text-[18px] text-[#0e131a] leading-[22px]" data-node-id="152:343">
+              Annotations
+            </div>
+            
+            {/* Edit Annotation Section */}
+            {showAnnotationForm && (
+              <div className="bg-[#f7f9fc] flex flex-col gap-[24px] items-start p-[12px] rounded-[6px] w-full" data-node-id="152:344">
+                <div className="font-medium text-[16px] text-[#0e131a] leading-[19px]" data-node-id="152:345">
+                  Edit Annotation
+                </div>
+                
+                <div className="flex flex-col gap-[16px] items-start w-full" data-node-id="152:346">
+                  {/* Species Field */}
+                  <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:347">
+                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:348">
+                      Species
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                    <Select value={formData.species} onValueChange={(value) => setFormData(prev => ({ ...prev, species: value }))}>
+                      <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]" data-node-id="152:349">
+                        <SelectValue placeholder="Select" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:350" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="blue-a-whale">Blue A Whale</SelectItem>
+                        <SelectItem value="blue-b-whale">Blue B Whale</SelectItem>
+                        <SelectItem value="humpback-whale">Humpback Whale</SelectItem>
+                        <SelectItem value="fin-whale">Fin Whale</SelectItem>
+                        <SelectItem value="ship">Ship</SelectItem>
+                        <SelectItem value="earthquake">Earthquake</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Call Type Field */}
+                  <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:355">
+                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:356">
+                      Call Type
+                    </div>
+                    <Select value={formData.callType} onValueChange={(value) => setFormData(prev => ({ ...prev, callType: value }))}>
+                      <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]" data-node-id="152:357">
+                        <SelectValue placeholder="Select" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:358" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="song">Song</SelectItem>
+                        <SelectItem value="general-sound">General Sound</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex gap-[8px] h-[42px] items-start w-full" data-node-id="152:363">
+                  <div className="flex-1 bg-[#131a24] flex items-center justify-center h-[36px] p-[12px] rounded-[6px]" data-node-id="152:364" onClick={handleAnnotationSubmit}>
+                    <div className="font-medium text-[14px] text-white leading-[16px]" data-node-id="152:365">
+                      Done
+                    </div>
+                  </div>
+                  <div className="bg-white border border-[#ebeef5] flex items-center justify-center h-[36px] p-[12px] rounded-[6px] w-[42px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]" data-node-id="152:366" onClick={() => setShowAnnotationForm(false)}>
+                    <Delete className="w-[16px] h-[16px] text-[#5e6166]" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Annotations List */}
+            <div className="flex flex-col gap-[8px] items-start w-full" data-node-id="152:370">
+              {annotations.length > 0 ? (
+                // Dynamic Annotations List
+                annotations.map((annotation) => (
+                  <div
+                    key={annotation.id}
+                    className="border border-[#e7e7e8] flex gap-[12px] items-center p-[12px] rounded-[6px] w-full cursor-pointer"
+                    onClick={() => handleAnnotationClick(annotation)}
+                  >
+                    <div className={`h-[42px] rounded-[60px] w-[4px] ${getStatusColor(annotation.status)}`} />
+                    <div className="flex flex-col gap-[6px] items-start flex-1">
+                      <div className="flex flex-col gap-[6px] items-start font-normal text-[14px] leading-[17px]">
+                        <div className="text-[#0e131a]">
+                          {annotation.label || `${annotation.species} - ${annotation.callType}`}
+                        </div>
+                        <div className="text-[#5e6166]">
+                          {getStatusLabel(annotation.status)}
+                        </div>
+                      </div>
+                    </div>
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteAnnotation(annotation.id);
                       }}
+                      className="p-1"
                     >
-                      <X className="w-4 h-4" />
-                    </Button>
+                      <X className="w-4 h-4 text-[#5e6166]" />
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                ))
+              ) : (
+                <div className="text-[#5e6166]">No annotations found</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
