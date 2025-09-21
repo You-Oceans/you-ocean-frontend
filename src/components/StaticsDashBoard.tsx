@@ -40,7 +40,8 @@ interface StatisticsDashboardProps {
 export default function StatisticsDashboard({
   data,
 }: StatisticsDashboardProps) {
-  if (!data || data.length === 0) {
+  // Enhanced safety checks
+  if (!data || !Array.isArray(data) || data.length === 0) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -53,14 +54,19 @@ export default function StatisticsDashboard({
     );
   }
 
-  // Group data by species (label)
-  const speciesGroups = data.reduce((acc, item) => {
-    if (!acc[item.label]) {
-      acc[item.label] = [];
-    }
-    acc[item.label].push(item);
-    return acc;
-  }, {} as Record<string, DetectionData[]>);
+  try {
+    // Group data by species (label)
+    const speciesGroups = data.reduce((acc, item) => {
+      if (!item || !item.label) {
+        console.warn("Invalid data item:", item);
+        return acc;
+      }
+      if (!acc[item.label]) {
+        acc[item.label] = [];
+      }
+      acc[item.label].push(item);
+      return acc;
+    }, {} as Record<string, DetectionData[]>);
 
   // Calculate statistics for each species
   const speciesStats = Object.entries(speciesGroups).map(([label, items]) => {
@@ -366,4 +372,17 @@ export default function StatisticsDashboard({
       </Tabs>
     </div>
   );
+  } catch (error) {
+    console.error("Error processing statistics data:", error);
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Error Processing Data</CardTitle>
+          <CardDescription>
+            There was an error processing the statistics data. Please try again.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 }

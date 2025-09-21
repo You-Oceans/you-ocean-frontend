@@ -17,6 +17,7 @@ import { extractUniqueSpecies, initializeSelectedSpecies } from "@/utilis/dataPr
 
 export default function App() {
   const [data, setData] = useState<any[] | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
   const [timeframe, setTimeframe] = useState<"week" | "month" | "custom">(
     "month"
   );
@@ -52,10 +53,12 @@ export default function App() {
     customDates?: { startDate: string; endDate: string }
   ) => {
     setTimeframe(timeframe);
+    setLoading(true);
 
     // Handle week timeframe with default date
     if (timeframe === "week" && !selectedDate) {
       const defaultDate = getDefaultWeekDate();
+      setLoading(false);
       return handleFetchData("week", defaultDate);
     }
 
@@ -72,10 +75,19 @@ export default function App() {
         customDates,
       };
       const result = await fetchData(params);
-      setData(result);
+      
+      // Ensure result is always an array
+      if (Array.isArray(result)) {
+        setData(result);
+      } else {
+        console.warn("API returned non-array data:", result);
+        setData([]);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       setData([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,9 +106,24 @@ export default function App() {
       <div className="bg-white rounded-lg shadow-md p-6 ">
         <h2 className="text-2xl font-bold mb-4">Detection Statistics</h2>
 
-        {data && <StatisticsDashboard data={data} />}
+        {loading && (
+          <div className="text-center p-8">
+            <div className="inline-flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-gray-500">Loading statistics...</span>
+            </div>
+          </div>
+        )}
 
-        {!data && (
+        {!loading && data && data.length > 0 && <StatisticsDashboard data={data} />}
+
+        {!loading && data && data.length === 0 && (
+          <div className="text-center p-8 text-gray-500">
+            No data found for the selected time period
+          </div>
+        )}
+
+        {!loading && !data && (
           <div className="text-center p-8 text-gray-500">
             Select a time period to view detection statistics
           </div>

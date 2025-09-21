@@ -32,14 +32,28 @@ export const fetchData = async (params: FetchDataParams): Promise<any[]> => {
   }
 
   try {
+    console.log("Fetching data from:", apiUrl);
     const response = await fetch(apiUrl);
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+    
     const result = await response.json();
-    return result.data || [];
+    console.log("API Response:", result);
+    
+    // Ensure we always return an array
+    const data = result.data || result || [];
+    
+    if (!Array.isArray(data)) {
+      console.warn("API response is not an array:", data);
+      return [];
+    }
+    
+    return data;
   } catch (error) {
     console.error("Error fetching data:", error);
-    throw error;
+    // Return empty array instead of throwing to prevent crashes
+    return [];
   }
 };

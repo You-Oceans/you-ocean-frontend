@@ -42,7 +42,8 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
     { value: 7, label: "July" },
   ];
 
-  const selectedMonthLabel = months.find(m => m.value === month)?.label || "January";
+  const selectedMonthLabel =
+    months.find((m) => m.value === month)?.label || "January";
 
   return (
     <div className="flex flex-col items-center space-y-4">
@@ -52,7 +53,7 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
           {selectedMonthLabel} {year}
         </span>
       </div>
-      
+
       <div className="flex items-center space-x-3">
         <div className="flex flex-col space-y-2">
           <label className="text-xs font-medium text-gray-600 uppercase tracking-wider">
@@ -81,7 +82,10 @@ const MonthSelector: React.FC<MonthSelectorProps> = ({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="2023">2023</SelectItem>
               <SelectItem value="2024">2024</SelectItem>
+              <SelectItem value="2025">2025</SelectItem>
+              <SelectItem value="2026">2026</SelectItem>
             </SelectContent>
           </Select>
         </div>

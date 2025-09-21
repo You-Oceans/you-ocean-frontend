@@ -1,8 +1,15 @@
-import { Bell, Save, MapPin, Radio, Volume2, Clock } from "lucide-react";
+import { Bell, Save, MapPin, Radio, Volume2, Clock, Calendar, Edit } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { DateSelector } from "@/components/DateSelector";
 import MonthSelector from "@/components/MonthSelector";
 import DateRangeSelector from "@/components/DateRangeSelector";
@@ -50,6 +57,42 @@ export function HydrophoneStation({
     startDate: "2024-01-01",
     endDate: "2026-07-31",
   });
+
+  // Dialog state management
+  const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
+  const [isMonthDialogOpen, setIsMonthDialogOpen] = useState(false);
+  const [isRangeDialogOpen, setIsRangeDialogOpen] = useState(false);
+
+  // Helper functions to format current selections
+  const getCurrentWeekDisplay = () => {
+    if (selectedDate) {
+      return selectedDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      });
+    }
+    // Show default date if none selected
+    const defaultDate = new Date(2024, 6, 1);
+    return defaultDate.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const getCurrentMonthDisplay = () => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+    return `${monthNames[selectedMonth.month - 1]} ${selectedMonth.year}`;
+  };
+
+  const getCurrentRangeDisplay = () => {
+    const formatDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+    return `${formatDate(customRange.startDate)} - ${formatDate(customRange.endDate)}`;
+  };
 
   // Handle tab changes and trigger data fetch
   const handleTabChange = (value: string) => {
@@ -152,63 +195,111 @@ export function HydrophoneStation({
             {/* Tabs for Stats */}
             <div className="pt-4">
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="grid w-fit grid-cols-3 h-10">
-                  <TabsTrigger 
-                    value="weekly" 
-                  >
-                    Weekly Stats
-                  </TabsTrigger>
-                  <TabsTrigger value="monthly">
-                    Monthly Stats
-                  </TabsTrigger>
-                  <TabsTrigger value="custom">
-                    Custom range
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="weekly" className="mt-6">
-                  <div className="flex justify-center">
-                    <DateSelector
-                      date={selectedDate || undefined}
-                      minDate={new Date(2024, 0, 1)}
-                      maxDate={new Date(2026, 6, 31)}
-                      onDateChange={(date) => {
-                        if (date) {
-                          setSelectedDate(date);
-                          onTimeframeChange?.("week", date);
-                        }
-                      }}
-                    />
+                <div className="flex items-center justify-between mb-4">
+                  <TabsList className="grid w-fit grid-cols-3 h-10">
+                    <TabsTrigger value="weekly">
+                      Weekly Stats
+                    </TabsTrigger>
+                    <TabsTrigger value="monthly">
+                      Monthly Stats
+                    </TabsTrigger>
+                    <TabsTrigger value="custom">
+                      Custom range
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Current Selection Display */}
+                  <div className="flex items-center gap-2">
+                    {activeTab === "weekly" && (
+                      <Dialog open={isDateDialogOpen} onOpenChange={setIsDateDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2 text-xs">
+                            <Calendar className="w-3 h-3" />
+                            {getCurrentWeekDisplay()}
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Select Week</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex justify-center p-4">
+                            <DateSelector
+                              date={selectedDate || undefined}
+                              minDate={new Date(2024, 0, 1)}
+                              maxDate={new Date(2026, 6, 31)}
+                              onDateChange={(date) => {
+                                if (date) {
+                                  setSelectedDate(date);
+                                  onTimeframeChange?.("week", date);
+                                  setIsDateDialogOpen(false);
+                                }
+                              }}
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {activeTab === "monthly" && (
+                      <Dialog open={isMonthDialogOpen} onOpenChange={setIsMonthDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2 text-xs">
+                            <Calendar className="w-3 h-3" />
+                            {getCurrentMonthDisplay()}
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Select Month</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex justify-center p-4">
+                            <MonthSelector
+                              selectedMonth={selectedMonth}
+                              onMonthChange={(month, year) => {
+                                setSelectedMonth({ month, year });
+                                onTimeframeChange?.("month", undefined, { month, year });
+                                setIsMonthDialogOpen(false);
+                              }}
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {activeTab === "custom" && (
+                      <Dialog open={isRangeDialogOpen} onOpenChange={setIsRangeDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2 text-xs">
+                            <Calendar className="w-3 h-3" />
+                            {getCurrentRangeDisplay()}
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle>Select Custom Range</DialogTitle>
+                          </DialogHeader>
+                          <div className="p-4">
+                            <DateRangeSelector
+                              initialStartDate={customRange.startDate}
+                              initialEndDate={customRange.endDate}
+                              onDateRangeChange={(startDate, endDate) => {
+                                setCustomRange({ startDate, endDate });
+                                onTimeframeChange?.("custom", undefined, undefined, {
+                                  startDate,
+                                  endDate,
+                                });
+                                setIsRangeDialogOpen(false);
+                              }}
+                            />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
-                </TabsContent>
-                
-                <TabsContent value="monthly" className="mt-6">
-                  <div className="flex justify-center">
-                    <MonthSelector
-                      selectedMonth={selectedMonth}
-                      onMonthChange={(month, year) => {
-                        setSelectedMonth({ month, year });
-                        onTimeframeChange?.("month", undefined, { month, year });
-                      }}
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="custom" className="mt-6">
-                  <div className="flex justify-center">
-                    <DateRangeSelector
-                      initialStartDate={customRange.startDate}
-                      initialEndDate={customRange.endDate}
-                      onDateRangeChange={(startDate, endDate) => {
-                        setCustomRange({ startDate, endDate });
-                        onTimeframeChange?.("custom", undefined, undefined, {
-                          startDate,
-                          endDate,
-                        });
-                      }}
-                    />
-                  </div>
-                </TabsContent>
+                </div>
               </Tabs>
             </div>
           </CardContent>
