@@ -27,7 +27,7 @@ export default function ActivityCards() {
          
         </CardContent>
       </Card>
-
+     
       {/* Trending Species Card */}
       <Card className="bg-card flex flex-col justify-between !p-6">
         <CardHeader className="flex flex-row items-center justify-between !p-0">
