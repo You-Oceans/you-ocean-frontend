@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Calendar, Play, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { X, Calendar, Play, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Trash2, Download } from 'lucide-react';
 import { Delete } from './icons/Delete';
 import { format, isBefore, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -190,6 +190,140 @@ export default function Annotate() {
 
   const deleteAnnotation = (id: string) => {
     setAnnotations(prev => prev.filter(ann => ann.id !== id));
+  };
+
+  const clearAllAnnotations = () => {
+    setAnnotations([]);
+    console.log('All annotations cleared');
+  };
+
+  const downloadAnnotatedImage = async () => {
+    if (!imageRef.current || !containerRef.current) return;
+
+    try {
+      // Create a canvas to draw the image with annotations
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const img = imageRef.current;
+      const container = containerRef.current;
+      
+      // Set canvas size to match the image's natural size
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+
+      // Calculate the scale factors
+      const containerRect = container.getBoundingClientRect();
+      const scaleX = img.naturalWidth / containerRect.width;
+      const scaleY = img.naturalHeight / containerRect.height;
+
+      // Create a new image element with CORS headers to avoid tainted canvas
+      const corsImage = new Image();
+      corsImage.crossOrigin = 'anonymous';
+      
+      // Wait for the image to load
+      await new Promise((resolve, reject) => {
+        corsImage.onload = resolve;
+        corsImage.onerror = reject;
+        corsImage.src = img.src;
+      });
+
+      // Draw the image
+      ctx.drawImage(corsImage, 0, 0);
+
+      // Draw annotations
+      annotations.forEach((annotation) => {
+        if (!showLayers[annotation.status as keyof typeof showLayers]) return;
+
+        // Scale the annotation coordinates to match the natural image size
+        const scaledX = annotation.x * scaleX;
+        const scaledY = annotation.y * scaleY;
+        const scaledWidth = annotation.width * scaleX;
+        const scaledHeight = annotation.height * scaleY;
+
+        // Set stroke style based on annotation status
+        let strokeColor;
+        switch (annotation.status) {
+          case 'approved': strokeColor = '#248600'; break;
+          case 'ai': strokeColor = '#5e6166'; break;
+          case 'pending': strokeColor = '#0078e8'; break;
+          default: strokeColor = '#5e6166'; break;
+        }
+
+        // Draw the annotation rectangle
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([]);
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+
+        // Draw the annotation label
+        if (annotation.species) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+          ctx.font = '16px Arial';
+          const textMetrics = ctx.measureText(annotation.species);
+          const textWidth = textMetrics.width;
+          const textHeight = 20;
+          
+          // Draw background for text
+          ctx.fillRect(scaledX, scaledY - textHeight - 5, textWidth + 10, textHeight + 5);
+          
+          // Draw text
+          ctx.fillStyle = 'white';
+          ctx.fillText(annotation.species, scaledX + 5, scaledY - 8);
+        }
+      });
+
+      // Create download link
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `annotated-spectrogram-${format(date || new Date(), 'yyyy-MM-dd')}-${currentImageIndex + 1}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        console.log('Annotated image downloaded successfully');
+      }, 'image/png');
+
+    } catch (error) {
+      console.error('Error downloading annotated image:', error);
+      
+      // Fallback: Download annotations as JSON data if image download fails
+      const annotationData = {
+        date: date ? format(date, 'yyyy-MM-dd') : 'unknown',
+        imageIndex: currentImageIndex + 1,
+        imageUrl: spectrogramUrls[currentImageIndex] || 'unknown',
+        annotations: annotations.map(ann => ({
+          id: ann.id,
+          coordinates: { x: ann.x, y: ann.y, width: ann.width, height: ann.height },
+          species: ann.species,
+          callType: ann.callType,
+          label: ann.label,
+          description: ann.description,
+          status: ann.status
+        }))
+      };
+
+      const jsonBlob = new Blob([JSON.stringify(annotationData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(jsonBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `annotations-${format(date || new Date(), 'yyyy-MM-dd')}-${currentImageIndex + 1}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      console.log('Downloaded annotations as JSON due to CORS restrictions');
+      
+      // You could also show a toast notification here
+      alert('Image download failed due to CORS restrictions. Annotations saved as JSON file instead.');
+    }
   };
 
   // Playback control functions
@@ -479,6 +613,7 @@ export default function Annotate() {
                         alt={`Spectrogram ${currentImageIndex + 1}`}
                         className="w-full h-full object-contain"
                         draggable={false}
+                        crossOrigin="anonymous"
                         onLoadStart={handleImageLoadStart}
                         onLoad={handleImageLoadComplete}
                         onError={handleImageError}
@@ -558,9 +693,35 @@ export default function Annotate() {
         {/* Sidebar */}
         <div className="bg-white relative w-[427px] h-full border-l border-[#ebeef5]" data-node-id="152:342">
           <div className="flex flex-col gap-[24px] items-start p-[18px] h-full">
-            {/* Title */}
-            <div className="font-medium text-[18px] text-[#0e131a] leading-[22px]" data-node-id="152:343">
-              Annotations
+            {/* Title and Action Buttons */}
+            <div className="flex items-center justify-between w-full">
+              <div className="font-medium text-[18px] text-[#0e131a] leading-[22px]" data-node-id="152:343">
+                Annotations
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadAnnotatedImage}
+                  disabled={!date || spectrogramUrls.length === 0 || isImageLoading}
+                  className="h-8 px-3 text-xs hover:bg-gray-50 border-gray-200 transition-colors"
+                  title="Download annotated image"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllAnnotations}
+                  disabled={annotations.length === 0}
+                  className="h-8 px-3 text-xs hover:bg-red-50 border-gray-200 hover:border-red-200 hover:text-red-600 transition-colors"
+                  title="Clear all annotations"
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Clear
+                </Button>
+              </div>
             </div>
             
             {/* Edit Annotation Section */}
