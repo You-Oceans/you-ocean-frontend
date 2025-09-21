@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { SpeciesData } from "../types/species";
 import { transformDataToPoints } from "../utilis/transform-data";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -16,8 +15,8 @@ export default function SpeciesVisualization() {
   const [selectedPoint, setSelectedPoint] = useState<SpeciesData | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  const minDate = new Date(2024, 0, 1);
-  const maxDate = new Date(2024, 6, 31);
+  const minDate = new Date(2023, 0, 1);
+  const maxDate = new Date(2026, 6, 31);
 
   const formatDateForApi = (date: Date) => {
     if (date < minDate) return "2024-01-01";
@@ -152,11 +151,11 @@ export default function SpeciesVisualization() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Clock Visualization - 1/3 width */}
         <div className="col-span-1">
           <Card className="overflow-hidden h-full">
-             <CardContent className="p-8">
+             <CardContent className="p-4">
                <div className="relative h-[400px] bg-white">
                  <svg viewBox="-180 -180 360 360" className="w-full h-full">
                    {/* Main clock circle */}
@@ -271,95 +270,93 @@ export default function SpeciesVisualization() {
 
         {/* Species Details Panel - 2/3 width */}
         <div className="col-span-1 lg:col-span-2">
-          <Card className="h-fit">
-            <CardContent className="p-6">
-              {selectedPoint ? (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-semibold text-gray-900">Species Details</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setSelectedPoint(null)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: getSpeciesColor(selectedPoint.label) }}
-                    />
-                    <h4 className="text-lg font-medium text-gray-800">
-                      {getSpeciesDisplayName(selectedPoint.label)}
-                    </h4>
-                  </div>
+          <Card className="h-full">
+             <CardContent className="p-6">
+               {selectedPoint ? (
+                 <div className="space-y-6">
+                   {/* Header with species name and time */}
+                   <div className="space-y-3">
+                     <div className="flex items-center gap-3">
+                       <div 
+                         className="w-3 h-3 rounded-full"
+                         style={{ backgroundColor: getSpeciesColor(selectedPoint.label) }}
+                       />
+                       <h2 className="text-xl font-semibold text-gray-900">
+                         {getSpeciesDisplayName(selectedPoint.label)}
+                       </h2>
+                     </div>
+                     <p className="text-gray-500">
+                       Detected at {String(selectedPoint.hour).padStart(2, '0')}:{String(Math.floor(selectedPoint.second / 60)).padStart(2, '0')} {selectedPoint.hour < 12 ? 'am' : 'pm'}
+                     </p>
+                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">Time</span>
-                      <p className="font-medium">
-                        {String(selectedPoint.hour).padStart(2, '0')}:{String(Math.floor(selectedPoint.second / 60)).padStart(2, '0')}
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">Confidence</span>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          {(selectedPoint.confidence * 100).toFixed(1)}%
-                        </Badge>
-                      </div>
-                    </div>
+                   {/* Station and Call Type */}
+                   <div className="grid grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                       <h3 className="text-sm font-medium text-gray-900">Station</h3>
+                       <p className="text-gray-700">Hydrophone Station</p>
+                     </div>
+                     <div className="space-y-2">
+                       <h3 className="text-sm font-medium text-gray-900">Call Type</h3>
+                       <p className="text-gray-700">
+                         {selectedPoint.label === 'HUMPBACK' ? 'Pulse' : 
+                          selectedPoint.label === 'SHIP' ? 'Engine' : 'Vocalization'}
+                       </p>
+                     </div>
+                   </div>
 
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">Duration</span>
-                      <p className="font-medium">{selectedPoint.duration.toFixed(1)}s</p>
-                    </div>
+                   {/* Power Profile */}
+                   <div className="space-y-4">
+                     <h3 className="text-lg font-medium text-gray-900">Power Profile (dB)</h3>
+                     <div className="grid grid-cols-3 gap-6">
+                       <div className="text-center">
+                         <div className="text-3xl font-bold text-blue-500 mb-1">
+                           {selectedPoint.l50_power?.toFixed(0) || '144'}
+                         </div>
+                         <div className="text-sm text-gray-500">L50</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-3xl font-bold text-orange-500 mb-1">
+                           {selectedPoint.l75_power?.toFixed(0) || '144'}
+                         </div>
+                         <div className="text-sm text-gray-500">L75</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="text-3xl font-bold text-green-500 mb-1">
+                           {selectedPoint.l90_power?.toFixed(0) || '144'}
+                         </div>
+                         <div className="text-sm text-gray-500">L90</div>
+                       </div>
+                     </div>
+                   </div>
 
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">Frequency</span>
-                      <p className="font-medium">{selectedPoint.mean_frequency?.toFixed(1) || 'N/A'} Hz</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">L50 Power</span>
-                      <p className="font-medium">{selectedPoint.l50_power?.toFixed(2) || 'N/A'} dB</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">L75 Power</span>
-                      <p className="font-medium">{selectedPoint.l75_power?.toFixed(2) || 'N/A'} dB</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-gray-100">
-                    <div className="space-y-2">
-                      <span className="text-sm text-gray-500">Detection ID</span>
-                      <p className="text-xs font-mono bg-gray-50 p-2 rounded">
-                        {selectedPoint.id || 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 space-y-4">
-                  <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
-                    <RotateCcw className="w-8 h-8 text-blue-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Select a point on the clock to explore species activity
-                    </h3>
-                    <p className="text-gray-500 max-w-sm mx-auto">
-                      Click on a detection dot to view species details
-                    </p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
+                   {/* Spectrogram Button */}
+                   <Button 
+                     className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 text-base"
+                     onClick={() => {
+                       // Add spectrogram viewer functionality here
+                       console.log('Open spectrogram for:', selectedPoint);
+                     }}
+                   >
+                     Open Spectrogram viewer
+                   </Button>
+                 </div>
+               ) : (
+                 <div className="text-center py-12 space-y-4">
+                   <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+                     <RotateCcw className="w-8 h-8 text-blue-500" />
+                   </div>
+                   <div className="space-y-2">
+                     <h3 className="text-lg font-medium text-gray-900">
+                       Select a point on the clock to explore species activity
+                     </h3>
+                     <p className="text-gray-500 max-w-sm mx-auto">
+                       Click on a detection dot to view species details
+                     </p>
+                   </div>
+                 </div>
+               )}
+             </CardContent>
           </Card>
         </div>
       </div>
