@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MoreHorizontal, TrendingUp,Clock } from "lucide-react";
+import {  TrendingUp,Clock } from "lucide-react";
 
 export default function ActivityCards() {
   return (

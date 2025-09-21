@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Waves, Fish, Upload, Plus, Mail } from "lucide-react";
+import { Waves, Fish, Upload,  Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { MoreHorizontal } from "lucide-react";
