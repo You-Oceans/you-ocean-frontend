@@ -1,10 +1,13 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Calendar, Play, ChevronLeft, ChevronRight } from 'lucide-react';
-import { DateSelector } from './DateSelector';
+import { X, Calendar, Play, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Delete } from './icons/Delete';
+import { format, isBefore, isAfter } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Annotation {
   id: string;
@@ -25,14 +28,18 @@ export default function Annotate() {
   const [currentRect, setCurrentRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [showLayers] = useState({ ai: true, approved: true, pending: true });
   const [showAnnotationForm, setShowAnnotationForm] = useState(false);
-  const [date, setDate] = useState<Date | null>(null);
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [formData, setFormData] = useState({
     label: '',
     description: '',
     species: '',
     callType: ''
   });
+
+  const minDate = new Date(2023, 0, 1);
+  const maxDate = new Date(2026, 6, 31);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,16 +48,19 @@ export default function Annotate() {
   const sampleImageUrl = '/download.png';
 
   // Simulate API call when date is selected
-  const handleDateSelect = async (selectedDate: Date) => {
-    setDate(selectedDate);
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Simulate loading some data based on the date
-    console.log('Loading data for date:', selectedDate);
-    setIsLoading(false);
+  const handleDateSelect = async (selectedDate: Date | undefined) => {
+    if (selectedDate && !isBefore(selectedDate, minDate) && !isAfter(selectedDate, maxDate)) {
+      setDate(selectedDate);
+      setIsDatePickerOpen(false);
+      setIsLoading(true);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simulate loading some data based on the date
+      console.log('Loading data for date:', selectedDate);
+      setIsLoading(false);
+    }
   };
 
   const startDrawing = useCallback((e: React.MouseEvent) => {
@@ -159,18 +169,44 @@ export default function Annotate() {
       <div className="flex h-[calc(100vh-80px)]">
         {/* Main Content */}
         <div className="flex-1 p-6">
-          {/* Date Selector */}
+          {/* Custom shadcn Date Selector */}
           <div className="mb-6">
-            <DateSelector 
-              date={date || undefined} 
-              onDateChange={(newDate) => {
-                if (newDate) {
-                  handleDateSelect(newDate);
-                }
-              }}
-              minDate={new Date(2024, 0, 1)}
-              maxDate={new Date(2024, 6, 31)}
-            />
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[280px] justify-between text-left font-normal bg-white hover:bg-gray-50 border-gray-200 transition-colors",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <div className="flex items-center">
+                    <CalendarIcon className="mr-3 h-4 w-4 text-gray-500" />
+                    <span className="text-sm">
+                      {date ? format(date, "EEEE, MMMM d, yyyy") : "Select a date"}
+                    </span>
+                  </div>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 shadow-lg border-gray-200" align="start">
+                <div className="p-4 border-b border-gray-100">
+                  <h4 className="font-medium text-sm text-gray-900">Select Date</h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Choose a date to load spectrogram data for annotation
+                  </p>
+                </div>
+                <div className="p-4">
+                  <CalendarComponent
+                    mode="single"
+                    selected={date}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                    disabled={(date) => isBefore(date, minDate) || isAfter(date, maxDate)}
+                    className="rounded-md"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Conditional Content */}
@@ -195,7 +231,7 @@ export default function Annotate() {
                 {/* Clip Navigation */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-semibold">Clip 1 - Ultra-Low Band (0-50 Hz)</h2>
+                    <h2 className="text-lg font-semibold">Spectogram Visualisation</h2>
                     <Button variant="outline" size="sm">
                       <Play className="w-4 h-4 mr-2" />
                       Play
@@ -205,14 +241,14 @@ export default function Annotate() {
                     <Button variant="outline" size="sm">
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm text-gray-600">Clip 1 of 50</span>
+                    <span className="text-sm text-gray-600">Clip 1 of 24</span>
                     <Button variant="outline" size="sm">
                       <ChevronRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
                 
-                {/* Band Selection */}
+                {/* Band Selection
                 <div className="flex gap-2 mb-6">
                   {['Ultra-Low', 'Low', 'Mid', 'High', 'Ultra-High'].map((band) => (
                     <Button
@@ -224,7 +260,7 @@ export default function Annotate() {
                       {band}
                     </Button>
                   ))}
-                </div>
+                </div> */}
 
                 {/* Spectrogram Image Container */}
                 <div className="relative bg-white border rounded-lg overflow-hidden h-[500px]">
@@ -289,14 +325,6 @@ export default function Annotate() {
                       )}
                     </div>
                   </div>
-                  
-                  {/* Time Labels */}
-                  <div className="absolute bottom-2 left-4 text-xs text-gray-600">0s</div>
-                  <div className="absolute bottom-2 left-1/4 text-xs text-gray-600">15s</div>
-                  <div className="absolute bottom-2 left-1/2 text-xs text-gray-600">30s</div>
-                  <div className="absolute bottom-2 left-3/4 text-xs text-gray-600">45s</div>
-                  <div className="absolute bottom-2 right-4 text-xs text-gray-600">60s</div>
-
                   {/* Show Layers Legend */}
                   <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-3 py-2 rounded">
                     <div className="text-xs mb-1">Show layers:</div>
@@ -321,7 +349,7 @@ export default function Annotate() {
           )}
         </div>
 
-        {/* Sidebar - Exact Figma Design */}
+        {/* Sidebar */}
         <div className="bg-white relative w-[427px] h-full border-l border-[#ebeef5]" data-node-id="152:342">
           <div className="flex flex-col gap-[24px] items-start p-[18px] h-full">
             {/* Title */}
