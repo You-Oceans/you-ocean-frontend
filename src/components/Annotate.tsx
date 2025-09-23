@@ -21,6 +21,12 @@ interface Annotation {
   species: string;
   callType: string;
   status: 'pending' | 'approved' | 'ai';
+  author: string;
+  startTime: number;
+  endTime: number;
+  startFrequency: number;
+  endFrequency: number;
+  imgUrl: string;
 }
 
 export default function Annotate() {
@@ -44,12 +50,55 @@ export default function Annotate() {
     callType: ''
   });
   const [customCallType, setCustomCallType] = useState('');
+  const [author, setAuthor] = useState('Anonymous');
 
   const minDate = new Date(2023, 0, 1);
   const maxDate = new Date(2026, 6, 31);
 
+  // Spectrogram coordinate mapping constants
+  const SPECTROGRAM_TIME_RANGE = 60; // 60 seconds per spectrogram image
+  const SPECTROGRAM_FREQ_MAX = 8000; // Maximum frequency in Hz (at top, minimum is 0 Hz at bottom)
+
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Coordinate mapping functions - simplified linear mapping
+  const pixelToTime = (pixelX: number, imageDisplayWidth: number): number => {
+    // Map pixel X coordinate to time in seconds (0 to SPECTROGRAM_TIME_RANGE)
+    // Linear mapping: left edge = 0s, right edge = 60s
+    return (pixelX / imageDisplayWidth) * SPECTROGRAM_TIME_RANGE;
+  };
+
+  const pixelToFrequency = (pixelY: number, imageDisplayHeight: number): number => {
+    // Map pixel Y coordinate to frequency in Hz (linear scale)
+    // Y=0 (top) = HIGH frequency (8000 Hz), Y=imageDisplayHeight (bottom) = LOW frequency (0 Hz)
+    return ((imageDisplayHeight - pixelY) / imageDisplayHeight) * SPECTROGRAM_FREQ_MAX;
+  };
+
+  // Test function to verify coordinate mapping
+  const testCoordinateMapping = () => {
+    if (!imageRef.current) {
+      console.log('🧪 COORDINATE MAPPING TEST: No image available for testing');
+      return;
+    }
+    
+    const imageRect = imageRef.current.getBoundingClientRect();
+    const testWidth = imageRect.width;
+    const testHeight = imageRect.height;
+    
+    console.log('🧪 COORDINATE MAPPING TEST (Linear):');
+    console.log('Image dimensions:', { width: testWidth, height: testHeight });
+    console.log('Time mapping test (linear):');
+    console.log('  0% width (0px) -> 0s:', pixelToTime(0, testWidth));
+    console.log('  50% width (' + (testWidth/2) + 'px) -> 30s:', pixelToTime(testWidth/2, testWidth));
+    console.log('  100% width (' + testWidth + 'px) -> 60s:', pixelToTime(testWidth, testWidth));
+    
+    console.log('Frequency mapping test (linear):');
+    console.log('  0% height (0px) -> 8000Hz (top = high freq):', pixelToFrequency(0, testHeight));
+    console.log('  50% height (' + (testHeight/2) + 'px) -> 4000Hz:', pixelToFrequency(testHeight/2, testHeight));
+    console.log('  100% height (' + testHeight + 'px) -> 0Hz (bottom = low freq):', pixelToFrequency(testHeight, testHeight));
+  };
+
 
   // Fetch spectrogram URLs from API
   const fetchSpectrogramUrls = async (selectedDate: Date) => {
@@ -87,9 +136,8 @@ export default function Annotate() {
       }
     } catch (error) {
       console.error('Error fetching spectrogram URLs:', error);
-      // Fallback to sample images for testing
-      const fallbackUrls = Array.from({ length: 5 }, (_, i) => `/download.png?t=${i}`);
-      setSpectrogramUrls(fallbackUrls);
+      // Set empty array instead of fallback images
+      setSpectrogramUrls([]);
       setCurrentImageIndex(0);
     }
   };
@@ -107,12 +155,16 @@ export default function Annotate() {
       // Fetch spectrogram URLs for the selected date
       await fetchSpectrogramUrls(selectedDate);
       
+      // Test coordinate mapping for debugging
+      testCoordinateMapping();
+      
       setIsLoading(false);
     }
   };
 
   const startDrawing = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current) return;
+    // Only allow drawing when image is loaded and visible
+    if (!containerRef.current || !imageRef.current || isImageLoading || spectrogramUrls.length === 0) return;
     
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -120,10 +172,10 @@ export default function Annotate() {
     
     setIsDrawing(true);
     setCurrentRect({ x, y, width: 0, height: 0 });
-  }, []);
+  }, [isImageLoading, spectrogramUrls.length]);
 
   const draw = useCallback((e: React.MouseEvent) => {
-    if (!isDrawing || !currentRect || !containerRef.current) return;
+    if (!isDrawing || !currentRect || !containerRef.current || !imageRef.current || isImageLoading) return;
     
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -134,7 +186,7 @@ export default function Annotate() {
       width: x - currentRect.x,
       height: y - currentRect.y
     });
-  }, [isDrawing, currentRect]);
+  }, [isDrawing, currentRect, isImageLoading]);
 
   const stopDrawing = useCallback(() => {
     if (!isDrawing || !currentRect) return;
@@ -148,22 +200,50 @@ export default function Annotate() {
   }, [isDrawing, currentRect]);
 
   const handleAnnotationSubmit = () => {
-    if (!currentRect) return;
+    if (!currentRect || !containerRef.current || !imageRef.current) return;
     
     // Use custom call type if "other" is selected, otherwise use the selected value
     const finalCallType = formData.callType === 'other' ? customCallType : formData.callType;
     
+    // Get image dimensions for accurate coordinate mapping
+    const imageElement = imageRef.current;
+    const imageDisplayRect = imageElement.getBoundingClientRect();
+    const imageDisplayWidth = imageDisplayRect.width;
+    const imageDisplayHeight = imageDisplayRect.height;
+    
+    // Calculate pixel coordinates (normalized to top-left corner)
+    const leftX = Math.min(currentRect.x, currentRect.x + currentRect.width);
+    const topY = Math.min(currentRect.y, currentRect.y + currentRect.height);
+    const rightX = Math.max(currentRect.x, currentRect.x + currentRect.width);
+    const bottomY = Math.max(currentRect.y, currentRect.y + currentRect.height);
+    
+    // Convert pixel coordinates to time and frequency using image dimensions
+    // start_time = left edge (leftX)
+    // end_time = right edge (rightX)
+    // start_frequency = bottom edge (bottomY) - lower frequency
+    // end_frequency = top edge (topY) - higher frequency
+    const startTime = pixelToTime(leftX, imageDisplayWidth);
+    const endTime = pixelToTime(rightX, imageDisplayWidth);
+    const startFrequency = pixelToFrequency(bottomY, imageDisplayHeight);
+    const endFrequency = pixelToFrequency(topY, imageDisplayHeight);
+    
     const newAnnotation: Annotation = {
       id: Date.now().toString(),
-      x: Math.min(currentRect.x, currentRect.x + currentRect.width),
-      y: Math.min(currentRect.y, currentRect.y + currentRect.height),
+      x: leftX,
+      y: topY,
       width: Math.abs(currentRect.width),
       height: Math.abs(currentRect.height),
       label: formData.label,
       description: formData.description,
       species: formData.species,
       callType: finalCallType,
-      status: 'pending'
+      status: 'pending',
+      author: author,
+      startTime: startTime,
+      endTime: endTime,
+      startFrequency: startFrequency,
+      endFrequency: endFrequency,
+      imgUrl: spectrogramUrls[currentImageIndex] || ''
     };
     
     setAnnotations(prev => [...prev, newAnnotation]);
@@ -172,18 +252,31 @@ export default function Annotate() {
     setFormData({ label: '', description: '', species: '', callType: '' });
     setCustomCallType('');
     
-    // Log coordinates to console
-    console.log('Annotation created:', {
+    // Log coordinates to console with detailed debugging
+    console.log('🔥 ANNOTATION DEBUG:', {
       id: newAnnotation.id,
-      coordinates: {
-        x: newAnnotation.x,
-        y: newAnnotation.y,
-        width: newAnnotation.width,
-        height: newAnnotation.height
+      imageInfo: {
+        imageDisplayWidth: imageDisplayWidth,
+        imageDisplayHeight: imageDisplayHeight,
+        naturalWidth: imageElement.naturalWidth,
+        naturalHeight: imageElement.naturalHeight,
+        imageBoundingRect: imageDisplayRect
       },
-      data: {
-        label: newAnnotation.label,
-        description: newAnnotation.description,
+      rawPixelCoordinates: {
+        leftX: leftX,
+        rightX: rightX, 
+        topY: topY,
+        bottomY: bottomY,
+        annotationWidth: newAnnotation.width,
+        annotationHeight: newAnnotation.height
+      },
+      calculatedCoordinates: {
+        startTime: startTime.toFixed(2) + 's (left edge)',
+        endTime: endTime.toFixed(2) + 's (right edge)',
+        startFrequency: startFrequency.toFixed(2) + 'Hz (bottom edge)', 
+        endFrequency: endFrequency.toFixed(2) + 'Hz (top edge)'
+      },
+      expectedValues: {
         species: newAnnotation.species,
         callType: finalCallType
       }
@@ -191,7 +284,16 @@ export default function Annotate() {
   };
 
   const handleAnnotationClick = (annotation: Annotation) => {
-    console.log('Annotation clicked:', annotation);
+    console.log('📍 ANNOTATION CLICKED - TIME INFO:', {
+      id: annotation.id,
+      species: annotation.species,
+      callType: annotation.callType,
+      startTime: `${annotation.startTime.toFixed(2)}s`,
+      endTime: `${annotation.endTime.toFixed(2)}s`,
+      duration: `${(annotation.endTime - annotation.startTime).toFixed(2)}s`,
+      startFrequency: `${annotation.startFrequency.toFixed(2)}Hz`,
+      endFrequency: `${annotation.endFrequency.toFixed(2)}Hz`
+    });
   };
 
   const deleteAnnotation = (id: string) => {
@@ -201,6 +303,34 @@ export default function Annotate() {
   const clearAllAnnotations = () => {
     setAnnotations([]);
     console.log('All annotations cleared');
+  };
+
+  const downloadAnnotationsJSON = () => {
+    if (annotations.length === 0) {
+      console.log('No annotations to log');
+      return;
+    }
+
+    const annotationData = {
+      date: date ? format(date, 'yyyy-MM-dd') : 'unknown',
+      author: author,
+      audio_url: spectrogramUrls[currentImageIndex] || 'unknown',
+      annotations: annotations.map(ann => ({
+        start_time: ann.startTime,
+        end_time: ann.endTime,
+        start_frequency: ann.startFrequency,
+        end_frequency: ann.endFrequency,
+        call_type: ann.callType,
+        species: ann.species,
+        img_url: ann.imgUrl,
+        label: ann.label,
+        description: ann.description,
+        status: ann.status,
+        author: ann.author
+      }))
+    };
+
+    console.log('📊 ANNOTATIONS JSON DATA:', JSON.stringify(annotationData, null, 2));
   };
 
   const downloadAnnotatedImage = async () => {
@@ -302,16 +432,20 @@ export default function Annotate() {
       // Fallback: Download annotations as JSON data if image download fails
       const annotationData = {
         date: date ? format(date, 'yyyy-MM-dd') : 'unknown',
-        imageIndex: currentImageIndex + 1,
-        imageUrl: spectrogramUrls[currentImageIndex] || 'unknown',
+        author: author,
+        audio_url: spectrogramUrls[currentImageIndex] || 'unknown',
         annotations: annotations.map(ann => ({
-          id: ann.id,
-          coordinates: { x: ann.x, y: ann.y, width: ann.width, height: ann.height },
+          start_time: ann.startTime,
+          end_time: ann.endTime,
+          start_frequency: ann.startFrequency,
+          end_frequency: ann.endFrequency,
+          call_type: ann.callType,
           species: ann.species,
-          callType: ann.callType,
+          img_url: ann.imgUrl,
           label: ann.label,
           description: ann.description,
-          status: ann.status
+          status: ann.status,
+          author: ann.author
         }))
       };
 
@@ -387,11 +521,11 @@ export default function Annotate() {
     setIsImageLoading(false);
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+  const handleImageError = () => {
     setIsImageLoading(false);
     console.error('Failed to load image:', spectrogramUrls[currentImageIndex]);
-    // Fallback to sample image on error
-    e.currentTarget.src = '/download.png';
+    // Don't fallback to download.png, just log the error
+    // The image will remain broken, which is better than showing wrong content
   };
 
   // Navigation functions
@@ -575,8 +709,8 @@ export default function Annotate() {
                         />
                       </div>
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0s</span>
-                        <span>{Math.round((currentImageIndex + 1) * 2)}s / {spectrogramUrls.length * 2}s</span>
+                        <span>0min</span>
+                        <span>{Math.round((currentImageIndex + 1) * 1)}min / {spectrogramUrls.length * 1}min</span>
                       </div>
                     </div>
                   )}
@@ -599,31 +733,42 @@ export default function Annotate() {
                 <div className="relative bg-white border rounded-lg overflow-hidden h-[500px]">
                   <div className="flex h-full">
                     {/* Frequency Labels */}
-                    <div className="flex flex-col justify-between p-2 w-12 border-r text-xs text-gray-500">
-                      <span>HIGH</span>
-                      <span>LOW</span>
+                    <div className="flex flex-col justify-between p-2 w-16 border-r text-xs text-gray-500">
+                      <span>8000Hz</span>
+                      <span>4000Hz</span>
+                      <span>0Hz</span>
                     </div>
                     
                     {/* Main Image Area */}
                     <div 
                       ref={containerRef}
-                      className="flex-1 relative cursor-crosshair"
+                      className={`flex-1 relative ${spectrogramUrls.length > 0 && !isImageLoading ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
                       onMouseDown={startDrawing}
                       onMouseMove={draw}
                       onMouseUp={stopDrawing}
                       onMouseLeave={stopDrawing}
                     >
-                      <img
-                        ref={imageRef}
-                        src={spectrogramUrls.length > 0 ? spectrogramUrls[currentImageIndex] : '/download.png'}
-                        alt={`Spectrogram ${currentImageIndex + 1}`}
-                        className="w-full h-full object-contain"
-                        draggable={false}
-                        crossOrigin="anonymous"
-                        onLoadStart={handleImageLoadStart}
-                        onLoad={handleImageLoadComplete}
-                        onError={handleImageError}
-                      />
+                      {spectrogramUrls.length > 0 ? (
+                        <img
+                          ref={imageRef}
+                          key={`${spectrogramUrls[currentImageIndex]}-${currentImageIndex}`}
+                          src={spectrogramUrls[currentImageIndex]}
+                          alt={`Spectrogram ${currentImageIndex + 1}`}
+                          className="w-full h-full object-contain "
+                          draggable={false}
+                          crossOrigin="anonymous"
+                          onLoadStart={handleImageLoadStart}
+                          onLoad={handleImageLoadComplete}
+                          onError={handleImageError}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <div className="text-center text-gray-500">
+                            <div className="text-lg font-medium mb-2">No spectrogram data available</div>
+                            <div className="text-sm">Please select a different date</div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Image Loading Overlay */}
                       {isImageLoading && (
@@ -708,13 +853,24 @@ export default function Annotate() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={downloadAnnotationsJSON}
+                  disabled={annotations.length === 0}
+                  className="h-8 px-3 text-xs hover:bg-gray-50 border-gray-200 transition-colors"
+                  title="Download annotations as JSON"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  JSON
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={downloadAnnotatedImage}
                   disabled={!date || spectrogramUrls.length === 0 || isImageLoading}
                   className="h-8 px-3 text-xs hover:bg-gray-50 border-gray-200 transition-colors"
                   title="Download annotated image"
                 >
                   <Download className="w-3 h-3 mr-1" />
-                  Download
+                  Image
                 </Button>
                 <Button
                   variant="outline"
@@ -738,6 +894,19 @@ export default function Annotate() {
                 </div>
                 
                 <div className="flex flex-col gap-[16px] items-start w-full" data-node-id="152:346">
+                  {/* Author Field */}
+                  <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:347">
+                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:348">
+                      Author
+                    </div>
+                    <Input
+                      placeholder="Enter your name"
+                      value={author}
+                      onChange={(e) => setAuthor(e.target.value)}
+                      className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] px-[12px] font-normal text-[14px] text-[#131a24] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  
                   {/* Species Field */}
                   <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:347">
                     <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:348">
