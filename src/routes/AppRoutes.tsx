@@ -27,17 +27,17 @@ const AppRoutes = () => {
         <Route
           path="/"
           element={
-            <PrivateRoute>
+            // <PrivateRoute>
               <Dashboard />
-            </PrivateRoute>
+            // </PrivateRoute>
           }
         />
         <Route
           path="/annotate"
           element={
-            <PrivateRoute>
+            // <PrivateRoute>
               <Annotate />
-            // </PrivateRoute>
+           // </PrivateRoute>
           }
         />
         <Route
@@ -51,9 +51,9 @@ const AppRoutes = () => {
         <Route
           path="/explore"
           element={
-            <PrivateRoute>
+            // <PrivateRoute>
               <Home />
-            </PrivateRoute>
+            // </PrivateRoute>
           }
         />
         <Route
