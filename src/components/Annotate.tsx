@@ -1,11 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { X, Calendar, Play, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Trash2, Download } from 'lucide-react';
+import { X, Calendar, Play, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Trash2, Download, Eye, EyeOff } from 'lucide-react';
 import { Delete } from './icons/Delete';
 import { format, isBefore, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,6 @@ interface Annotation {
   y: number;
   width: number;
   height: number;
-  label: string;
-  description: string;
   species: string;
   callType: string;
   status: 'pending' | 'approved' | 'ai';
@@ -27,13 +25,15 @@ interface Annotation {
   startFrequency: number;
   endFrequency: number;
   imgUrl: string;
+  imageIndex: number; // Track which image this annotation belongs to
 }
 
 export default function Annotate() {
+  // State management
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentRect, setCurrentRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [showLayers] = useState({ ai: true, approved: true, pending: true });
+  const [showAnnotations, setShowAnnotations] = useState(true);
   const [showAnnotationForm, setShowAnnotationForm] = useState(false);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,8 +44,6 @@ export default function Annotate() {
   const [playbackInterval, setPlaybackInterval] = useState<NodeJS.Timeout | null>(null);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [formData, setFormData] = useState({
-    label: '',
-    description: '',
     species: '',
     callType: ''
   });
@@ -55,50 +53,78 @@ export default function Annotate() {
   const minDate = new Date(2023, 0, 1);
   const maxDate = new Date(2026, 6, 31);
 
-  // Spectrogram coordinate mapping constants
-  const SPECTROGRAM_TIME_RANGE = 60; // 60 seconds per spectrogram image
-  const SPECTROGRAM_FREQ_MAX = 8000; // Maximum frequency in Hz (at top, minimum is 0 Hz at bottom)
+  // Original image dimensions
+  const originalWidth = 2850;
+  const originalHeight = 2100;
+  
+  // Rendered image dimensions (adjust based on your actual container size)
+  const renderedWidth = 952;
+  const renderedHeight = 700;
+  
+  // Domain ranges
+  const timeRange = { min: 0, max: 3600 }; // seconds (1 hour per image)
+  const frequencyRange = { min: 0, max: 8000 }; // Hz (linear scale)
+  
+  // Scaling factors
+  const scaleX = renderedWidth / originalWidth;
+  const scaleY = renderedHeight / originalHeight;
+  
+  // Original spectrogram bounding box (from your analysis)
+  const originalSpectrogramBbox = {
+    x: 191,
+    y: 94,
+    width: 2229,
+    height: 1845
+  };
+  
+  // Calculate scaled spectrogram dimensions and position
+  const spectrogramOverlay = {
+    left: Math.round(originalSpectrogramBbox.x * scaleX),
+    top: Math.round(originalSpectrogramBbox.y * scaleY),
+    width: Math.round(originalSpectrogramBbox.width * scaleX),
+    height: Math.round(originalSpectrogramBbox.height * scaleY)
+  };
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Coordinate mapping functions - simplified linear mapping
-  const pixelToTime = (pixelX: number, imageDisplayWidth: number): number => {
-    // Map pixel X coordinate to time in seconds (0 to SPECTROGRAM_TIME_RANGE)
-    // Linear mapping: left edge = 0s, right edge = 60s
-    return (pixelX / imageDisplayWidth) * SPECTROGRAM_TIME_RANGE;
-  };
-
-  const pixelToFrequency = (pixelY: number, imageDisplayHeight: number): number => {
-    // Map pixel Y coordinate to frequency in Hz (linear scale)
-    // Y=0 (top) = HIGH frequency (8000 Hz), Y=imageDisplayHeight (bottom) = LOW frequency (0 Hz)
-    return ((imageDisplayHeight - pixelY) / imageDisplayHeight) * SPECTROGRAM_FREQ_MAX;
-  };
-
-  // Test function to verify coordinate mapping
-  const testCoordinateMapping = () => {
-    if (!imageRef.current) {
-      console.log('🧪 COORDINATE MAPPING TEST: No image available for testing');
-      return;
-    }
+  // Convert pixel coordinates to domain coordinates
+  const pixelToDomain = useCallback((x: number, y: number) => {
+    // Convert to coordinates relative to spectrogram area
+    const relativeX = x - spectrogramOverlay.left;
+    const relativeY = y - spectrogramOverlay.top;
     
-    const imageRect = imageRef.current.getBoundingClientRect();
-    const testWidth = imageRect.width;
-    const testHeight = imageRect.height;
+    // Convert to normalized coordinates (0-1)
+    const normalizedX = relativeX / spectrogramOverlay.width;
+    const normalizedY = relativeY / spectrogramOverlay.height;
     
-    console.log('🧪 COORDINATE MAPPING TEST (Linear):');
-    console.log('Image dimensions:', { width: testWidth, height: testHeight });
-    console.log('Time mapping test (linear):');
-    console.log('  0% width (0px) -> 0s:', pixelToTime(0, testWidth));
-    console.log('  50% width (' + (testWidth/2) + 'px) -> 30s:', pixelToTime(testWidth/2, testWidth));
-    console.log('  100% width (' + testWidth + 'px) -> 60s:', pixelToTime(testWidth, testWidth));
+    // Convert to domain coordinates
+    const time = timeRange.min + (normalizedX * (timeRange.max - timeRange.min));
     
-    console.log('Frequency mapping test (linear):');
-    console.log('  0% height (0px) -> 8000Hz (top = high freq):', pixelToFrequency(0, testHeight));
-    console.log('  50% height (' + (testHeight/2) + 'px) -> 4000Hz:', pixelToFrequency(testHeight/2, testHeight));
-    console.log('  100% height (' + testHeight + 'px) -> 0Hz (bottom = low freq):', pixelToFrequency(testHeight, testHeight));
-  };
+    // For frequency (linear scale)
+    // Y is inverted (0 at top, max at bottom in pixel coordinates)
+    const frequency = frequencyRange.max - (normalizedY * (frequencyRange.max - frequencyRange.min));
+    
+    return { time, frequency };
+  }, [spectrogramOverlay, timeRange, frequencyRange]);
 
+  // Check if point is within spectrogram overlay
+  const isWithinOverlay = useCallback((x: number, y: number) => {
+    return x >= spectrogramOverlay.left && 
+           x <= spectrogramOverlay.left + spectrogramOverlay.width &&
+           y >= spectrogramOverlay.top && 
+           y <= spectrogramOverlay.top + spectrogramOverlay.height;
+  }, [spectrogramOverlay]);
+
+  // Get mouse position relative to container
+  const getMousePosition = useCallback((e: React.MouseEvent) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }, []);
 
   // Fetch spectrogram URLs from API
   const fetchSpectrogramUrls = async (selectedDate: Date) => {
@@ -112,12 +138,12 @@ export default function Annotate() {
       console.log('Selected date:', selectedDate);
       console.log('Formatted date for API:', formattedDate);
       
-      const response = await fetch(`https://api-v3.you-oceans.com/data/fetchs3Urls?date=${formattedDate}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+      const requestOptions = {
+        method: "GET",
+        redirect: "follow" as RequestRedirect
+      };
+
+      const response = await fetch(`https://api-v3.you-oceans.com/data/fetchs3Urls?date=${formattedDate}`, requestOptions);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -130,6 +156,8 @@ export default function Annotate() {
         console.log(`Loaded ${data.data.length} spectrogram images for ${formattedDate}`);
         setSpectrogramUrls(data.data);
         setCurrentImageIndex(0);
+        // Clear annotations when new date is selected
+        setAnnotations([]);
       } else {
         console.warn('Invalid response format:', data);
         throw new Error('Invalid response format');
@@ -139,6 +167,7 @@ export default function Annotate() {
       // Set empty array instead of fallback images
       setSpectrogramUrls([]);
       setCurrentImageIndex(0);
+      setAnnotations([]);
     }
   };
 
@@ -155,86 +184,86 @@ export default function Annotate() {
       // Fetch spectrogram URLs for the selected date
       await fetchSpectrogramUrls(selectedDate);
       
-      // Test coordinate mapping for debugging
-      testCoordinateMapping();
-      
       setIsLoading(false);
     }
   };
 
+  // Mouse event handlers
   const startDrawing = useCallback((e: React.MouseEvent) => {
     // Only allow drawing when image is loaded and visible
     if (!containerRef.current || !imageRef.current || isImageLoading || spectrogramUrls.length === 0) return;
     
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const mousePos = getMousePosition(e);
+    
+    // Only allow drawing within the spectrogram overlay area
+    if (!isWithinOverlay(mousePos.x, mousePos.y)) return;
     
     setIsDrawing(true);
-    setCurrentRect({ x, y, width: 0, height: 0 });
-  }, [isImageLoading, spectrogramUrls.length]);
+    setCurrentRect({ x: mousePos.x, y: mousePos.y, width: 0, height: 0 });
+  }, [isImageLoading, spectrogramUrls.length, getMousePosition, isWithinOverlay]);
 
   const draw = useCallback((e: React.MouseEvent) => {
     if (!isDrawing || !currentRect || !containerRef.current || !imageRef.current || isImageLoading) return;
     
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const mousePos = getMousePosition(e);
+    
+    // Constrain mouse position to overlay bounds
+    const constrainedX = Math.max(
+      spectrogramOverlay.left,
+      Math.min(mousePos.x, spectrogramOverlay.left + spectrogramOverlay.width)
+    );
+    const constrainedY = Math.max(
+      spectrogramOverlay.top,
+      Math.min(mousePos.y, spectrogramOverlay.top + spectrogramOverlay.height)
+    );
     
     setCurrentRect({
-      ...currentRect,
-      width: x - currentRect.x,
-      height: y - currentRect.y
+      x: Math.min(currentRect.x, constrainedX),
+      y: Math.min(currentRect.y, constrainedY),
+      width: Math.abs(constrainedX - currentRect.x),
+      height: Math.abs(constrainedY - currentRect.y)
     });
-  }, [isDrawing, currentRect, isImageLoading]);
+  }, [isDrawing, currentRect, isImageLoading, getMousePosition, spectrogramOverlay]);
 
   const stopDrawing = useCallback(() => {
     if (!isDrawing || !currentRect) return;
     
     // Only create annotation if rectangle has minimum size
-    if (Math.abs(currentRect.width) > 10 && Math.abs(currentRect.height) > 10) {
+    if (currentRect.width > 5 && currentRect.height > 5) {
       setShowAnnotationForm(true);
+    } else {
+      // Reset drawing state if rectangle is too small
+      setCurrentRect(null);
     }
     
     setIsDrawing(false);
   }, [isDrawing, currentRect]);
 
+  // Handle annotation form submission
   const handleAnnotationSubmit = () => {
     if (!currentRect || !containerRef.current || !imageRef.current) return;
     
     // Use custom call type if "other" is selected, otherwise use the selected value
     const finalCallType = formData.callType === 'other' ? customCallType : formData.callType;
     
-    // Get image dimensions for accurate coordinate mapping
-    const imageElement = imageRef.current;
-    const imageDisplayRect = imageElement.getBoundingClientRect();
-    const imageDisplayWidth = imageDisplayRect.width;
-    const imageDisplayHeight = imageDisplayRect.height;
+    // Convert rectangle corners to domain coordinates
+    const topLeft = pixelToDomain(currentRect.x, currentRect.y);
+    const topRight = pixelToDomain(currentRect.x + currentRect.width, currentRect.y);
+    const bottomLeft = pixelToDomain(currentRect.x, currentRect.y + currentRect.height);
+    const bottomRight = pixelToDomain(currentRect.x + currentRect.width, currentRect.y + currentRect.height);
     
-    // Calculate pixel coordinates (normalized to top-left corner)
-    const leftX = Math.min(currentRect.x, currentRect.x + currentRect.width);
-    const topY = Math.min(currentRect.y, currentRect.y + currentRect.height);
-    const rightX = Math.max(currentRect.x, currentRect.x + currentRect.width);
-    const bottomY = Math.max(currentRect.y, currentRect.y + currentRect.height);
-    
-    // Convert pixel coordinates to time and frequency using image dimensions
-    // start_time = left edge (leftX)
-    // end_time = right edge (rightX)
-    // start_frequency = bottom edge (bottomY) - lower frequency
-    // end_frequency = top edge (topY) - higher frequency
-    const startTime = pixelToTime(leftX, imageDisplayWidth);
-    const endTime = pixelToTime(rightX, imageDisplayWidth);
-    const startFrequency = pixelToFrequency(bottomY, imageDisplayHeight);
-    const endFrequency = pixelToFrequency(topY, imageDisplayHeight);
+    // Extract time and frequency ranges
+    const startTime = topLeft.time;
+    const endTime = topRight.time;
+    const startFrequency = bottomLeft.frequency; // Lower frequency (bottom edge)
+    const endFrequency = topLeft.frequency; // Higher frequency (top edge)
     
     const newAnnotation: Annotation = {
       id: Date.now().toString(),
-      x: leftX,
-      y: topY,
-      width: Math.abs(currentRect.width),
-      height: Math.abs(currentRect.height),
-      label: formData.label,
-      description: formData.description,
+      x: currentRect.x,
+      y: currentRect.y,
+      width: currentRect.width,
+      height: currentRect.height,
       species: formData.species,
       callType: finalCallType,
       status: 'pending',
@@ -243,40 +272,31 @@ export default function Annotate() {
       endTime: endTime,
       startFrequency: startFrequency,
       endFrequency: endFrequency,
-      imgUrl: spectrogramUrls[currentImageIndex] || ''
+      imgUrl: spectrogramUrls[currentImageIndex] || '',
+      imageIndex: currentImageIndex // Associate annotation with current image
     };
     
     setAnnotations(prev => [...prev, newAnnotation]);
     setCurrentRect(null);
     setShowAnnotationForm(false);
-    setFormData({ label: '', description: '', species: '', callType: '' });
+    setFormData({ species: '', callType: '' });
     setCustomCallType('');
     
     // Log coordinates to console with detailed debugging
-    console.log('🔥 ANNOTATION DEBUG:', {
+    console.log('🔥 NEW ANNOTATION CREATED:', {
       id: newAnnotation.id,
-      imageInfo: {
-        imageDisplayWidth: imageDisplayWidth,
-        imageDisplayHeight: imageDisplayHeight,
-        naturalWidth: imageElement.naturalWidth,
-        naturalHeight: imageElement.naturalHeight,
-        imageBoundingRect: imageDisplayRect
+      imageIndex: currentImageIndex,
+      domainCoordinates: {
+        topLeft: `(${topLeft.time.toFixed(1)}s, ${topLeft.frequency.toFixed(1)}Hz)`,
+        topRight: `(${topRight.time.toFixed(1)}s, ${topRight.frequency.toFixed(1)}Hz)`,
+        bottomLeft: `(${bottomLeft.time.toFixed(1)}s, ${bottomLeft.frequency.toFixed(1)}Hz)`,
+        bottomRight: `(${bottomRight.time.toFixed(1)}s, ${bottomRight.frequency.toFixed(1)}Hz)`
       },
-      rawPixelCoordinates: {
-        leftX: leftX,
-        rightX: rightX, 
-        topY: topY,
-        bottomY: bottomY,
-        annotationWidth: newAnnotation.width,
-        annotationHeight: newAnnotation.height
-      },
-      calculatedCoordinates: {
-        startTime: startTime.toFixed(2) + 's (left edge)',
-        endTime: endTime.toFixed(2) + 's (right edge)',
-        startFrequency: startFrequency.toFixed(2) + 'Hz (bottom edge)', 
-        endFrequency: endFrequency.toFixed(2) + 'Hz (top edge)'
-      },
-      expectedValues: {
+      annotation: {
+        startTime: startTime.toFixed(2) + 's',
+        endTime: endTime.toFixed(2) + 's',
+        startFrequency: startFrequency.toFixed(2) + 'Hz',
+        endFrequency: endFrequency.toFixed(2) + 'Hz',
         species: newAnnotation.species,
         callType: finalCallType
       }
@@ -284,15 +304,16 @@ export default function Annotate() {
   };
 
   const handleAnnotationClick = (annotation: Annotation) => {
-    console.log('📍 ANNOTATION CLICKED - TIME INFO:', {
+    console.log('📍 ANNOTATION CLICKED:', {
       id: annotation.id,
       species: annotation.species,
       callType: annotation.callType,
-      startTime: `${annotation.startTime.toFixed(2)}s`,
-      endTime: `${annotation.endTime.toFixed(2)}s`,
-      duration: `${(annotation.endTime - annotation.startTime).toFixed(2)}s`,
-      startFrequency: `${annotation.startFrequency.toFixed(2)}Hz`,
-      endFrequency: `${annotation.endFrequency.toFixed(2)}Hz`
+      coordinates: {
+        startTime: `${annotation.startTime.toFixed(2)}s`,
+        endTime: `${annotation.endTime.toFixed(2)}s`,
+        startFrequency: `${annotation.startFrequency.toFixed(2)}Hz`,
+        endFrequency: `${annotation.endFrequency.toFixed(2)}Hz`
+      }
     });
   };
 
@@ -305,165 +326,58 @@ export default function Annotate() {
     console.log('All annotations cleared');
   };
 
+  // Download annotations as JSON
   const downloadAnnotationsJSON = () => {
     if (annotations.length === 0) {
-      console.log('No annotations to log');
+      console.log('No annotations to download');
       return;
     }
 
-    const annotationData = {
-      date: date ? format(date, 'yyyy-MM-dd') : 'unknown',
-      author: author,
-      audio_url: spectrogramUrls[currentImageIndex] || 'unknown',
-      annotations: annotations.map(ann => ({
-        start_time: ann.startTime,
-        end_time: ann.endTime,
-        start_frequency: ann.startFrequency,
-        end_frequency: ann.endFrequency,
+    // Group annotations by image index
+    const annotationsByImage = annotations.reduce((acc, ann) => {
+      if (!acc[ann.imageIndex]) {
+        acc[ann.imageIndex] = [];
+      }
+      acc[ann.imageIndex].push({
+        id: ann.id,
+        start_time_seconds: ann.startTime,
+        end_time_seconds: ann.endTime,
+        start_frequency_hz: ann.startFrequency,
+        end_frequency_hz: ann.endFrequency,
         call_type: ann.callType,
         species: ann.species,
-        img_url: ann.imgUrl,
-        label: ann.label,
-        description: ann.description,
+        author: ann.author,
         status: ann.status,
-        author: ann.author
-      }))
+        image_url: ann.imgUrl,
+        coordinates: {
+          top_left: { time: ann.startTime, frequency: ann.endFrequency },
+          top_right: { time: ann.endTime, frequency: ann.endFrequency },
+          bottom_left: { time: ann.startTime, frequency: ann.startFrequency },
+          bottom_right: { time: ann.endTime, frequency: ann.startFrequency }
+        }
+      });
+      return acc;
+    }, {} as Record<number, any[]>);
+
+    const annotationData = {
+      export_date: new Date().toISOString(),
+      selected_date: date ? format(date, 'yyyy-MM-dd') : 'unknown',
+      total_images: spectrogramUrls.length,
+      total_annotations: annotations.length,
+      annotations_by_image: annotationsByImage
     };
 
-    console.log('📊 ANNOTATIONS JSON DATA:', JSON.stringify(annotationData, null, 2));
-  };
-
-  const downloadAnnotatedImage = async () => {
-    if (!imageRef.current || !containerRef.current) return;
-
-    try {
-      // Create a canvas to draw the image with annotations
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = imageRef.current;
-      const container = containerRef.current;
-      
-      // Set canvas size to match the image's natural size
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-
-      // Calculate the scale factors
-      const containerRect = container.getBoundingClientRect();
-      const scaleX = img.naturalWidth / containerRect.width;
-      const scaleY = img.naturalHeight / containerRect.height;
-
-      // Create a new image element with CORS headers to avoid tainted canvas
-      const corsImage = new Image();
-      corsImage.crossOrigin = 'anonymous';
-      
-      // Wait for the image to load
-      await new Promise((resolve, reject) => {
-        corsImage.onload = resolve;
-        corsImage.onerror = reject;
-        corsImage.src = img.src;
-      });
-
-      // Draw the image
-      ctx.drawImage(corsImage, 0, 0);
-
-      // Draw annotations
-      annotations.forEach((annotation) => {
-        if (!showLayers[annotation.status as keyof typeof showLayers]) return;
-
-        // Scale the annotation coordinates to match the natural image size
-        const scaledX = annotation.x * scaleX;
-        const scaledY = annotation.y * scaleY;
-        const scaledWidth = annotation.width * scaleX;
-        const scaledHeight = annotation.height * scaleY;
-
-        // Set stroke style based on annotation status
-        let strokeColor;
-        switch (annotation.status) {
-          case 'approved': strokeColor = '#248600'; break;
-          case 'ai': strokeColor = '#5e6166'; break;
-          case 'pending': strokeColor = '#0078e8'; break;
-          default: strokeColor = '#5e6166'; break;
-        }
-
-        // Draw the annotation rectangle
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 3;
-        ctx.setLineDash([]);
-        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
-
-        // Draw the annotation label
-        if (annotation.species) {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-          ctx.font = '16px Arial';
-          const textMetrics = ctx.measureText(annotation.species);
-          const textWidth = textMetrics.width;
-          const textHeight = 20;
-          
-          // Draw background for text
-          ctx.fillRect(scaledX, scaledY - textHeight - 5, textWidth + 10, textHeight + 5);
-          
-          // Draw text
-          ctx.fillStyle = 'white';
-          ctx.fillText(annotation.species, scaledX + 5, scaledY - 8);
-        }
-      });
-
-      // Create download link
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `annotated-spectrogram-${format(date || new Date(), 'yyyy-MM-dd')}-${currentImageIndex + 1}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        console.log('Annotated image downloaded successfully');
-      }, 'image/png');
-
-    } catch (error) {
-      console.error('Error downloading annotated image:', error);
-      
-      // Fallback: Download annotations as JSON data if image download fails
-      const annotationData = {
-        date: date ? format(date, 'yyyy-MM-dd') : 'unknown',
-        author: author,
-        audio_url: spectrogramUrls[currentImageIndex] || 'unknown',
-        annotations: annotations.map(ann => ({
-          start_time: ann.startTime,
-          end_time: ann.endTime,
-          start_frequency: ann.startFrequency,
-          end_frequency: ann.endFrequency,
-          call_type: ann.callType,
-          species: ann.species,
-          img_url: ann.imgUrl,
-          label: ann.label,
-          description: ann.description,
-          status: ann.status,
-          author: ann.author
-        }))
-      };
-
-      const jsonBlob = new Blob([JSON.stringify(annotationData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(jsonBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `annotations-${format(date || new Date(), 'yyyy-MM-dd')}-${currentImageIndex + 1}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      console.log('Downloaded annotations as JSON due to CORS restrictions');
-      
-      // You could also show a toast notification here
-      alert('Image download failed due to CORS restrictions. Annotations saved as JSON file instead.');
-    }
+    const jsonBlob = new Blob([JSON.stringify(annotationData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(jsonBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `whale-annotations-${format(date || new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('📊 ANNOTATIONS DOWNLOADED:', annotationData);
   };
 
   // Playback control functions
@@ -475,13 +389,11 @@ export default function Annotate() {
     setCurrentImageIndex(0);
     
     const interval = setInterval(() => {
-      // Only advance if not loading an image
       if (!isImageLoading) {
         setCurrentImageIndex((prevIndex) => {
           const nextIndex = prevIndex + 1;
           console.log('Playback: moving from', prevIndex, 'to', nextIndex);
           if (nextIndex >= spectrogramUrls.length) {
-            // End of playback
             console.log('Playback finished');
             setIsPlaying(false);
             clearInterval(interval);
@@ -491,7 +403,7 @@ export default function Annotate() {
           return nextIndex;
         });
       }
-    }, 2000); // 2 seconds per image
+    }, 5000); // 5 seconds per image as requested
     
     setPlaybackInterval(interval);
   };
@@ -524,33 +436,30 @@ export default function Annotate() {
   const handleImageError = () => {
     setIsImageLoading(false);
     console.error('Failed to load image:', spectrogramUrls[currentImageIndex]);
-    // Don't fallback to download.png, just log the error
-    // The image will remain broken, which is better than showing wrong content
   };
 
   // Navigation functions
   const goToPreviousImage = () => {
-    console.log('Previous clicked. Current index:', currentImageIndex, 'Total URLs:', spectrogramUrls.length);
-    if (spectrogramUrls.length === 0 || isImageLoading) return;
+    if (spectrogramUrls.length === 0 || isImageLoading || isPlaying) return;
     setCurrentImageIndex((prevIndex) => {
       const newIndex = prevIndex > 0 ? prevIndex - 1 : spectrogramUrls.length - 1;
-      console.log('Moving to previous image:', newIndex);
       return newIndex;
     });
   };
 
   const goToNextImage = () => {
-    console.log('Next clicked. Current index:', currentImageIndex, 'Total URLs:', spectrogramUrls.length);
-    if (spectrogramUrls.length === 0 || isImageLoading) return;
+    if (spectrogramUrls.length === 0 || isImageLoading || isPlaying) return;
     setCurrentImageIndex((prevIndex) => {
       const newIndex = prevIndex < spectrogramUrls.length - 1 ? prevIndex + 1 : 0;
-      console.log('Moving to next image:', newIndex);
       return newIndex;
     });
   };
 
+  // Get current image annotations
+  const currentImageAnnotations = annotations.filter(ann => ann.imageIndex === currentImageIndex);
+
   // Cleanup interval on unmount
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (playbackInterval) {
         clearInterval(playbackInterval);
@@ -558,27 +467,13 @@ export default function Annotate() {
     };
   }, [playbackInterval]);
 
-  // Debug: log when currentImageIndex changes and trigger loading
-  React.useEffect(() => {
-    console.log('Current image index changed to:', currentImageIndex);
-    console.log('Current image URL:', spectrogramUrls[currentImageIndex]);
-    // Reset loading state when index changes (new image will trigger onLoadStart)
-    if (spectrogramUrls.length > 0) {
-      setIsImageLoading(true);
-    }
-  }, [currentImageIndex, spectrogramUrls]);
-
-  // Debug: log when spectrogramUrls changes
-  React.useEffect(() => {
-    console.log('Spectrogram URLs updated:', spectrogramUrls.length, 'images');
-  }, [spectrogramUrls]);
-
+  // Utility functions for styling
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-[#248600]';
-      case 'ai': return 'bg-[#5e6166]';
-      case 'pending': return 'bg-[#0078e8]';
-      default: return 'bg-[#5e6166]';
+      case 'approved': return 'border-[#248600] bg-[#248600]';
+      case 'ai': return 'border-[#5e6166] bg-[#5e6166]';
+      case 'pending': return 'border-[#0078e8] bg-[#0078e8]';
+      default: return 'border-[#5e6166] bg-[#5e6166]';
     }
   };
 
@@ -596,7 +491,7 @@ export default function Annotate() {
       <div className="flex h-[calc(100vh-80px)]">
         {/* Main Content */}
         <div className="flex-1 p-6">
-          {/* Custom shadcn Date Selector */}
+          {/* Date Selector */}
           <div className="mb-6">
             <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
@@ -655,82 +550,80 @@ export default function Annotate() {
           ) : (
             <Card className="w-full">
               <CardContent className="p-6">
-                {/* Clip Navigation */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-lg font-semibold">Spectrogram Visualisation</h2>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={togglePlayback}
-                        disabled={spectrogramUrls.length === 0 || isImageLoading}
-                      >
-                        {isPlaying ? (
-                          <X className="w-4 h-4 mr-2" />
-                        ) : (
-                          <Play className="w-4 h-4 mr-2" />
-                        )}
-                        {isPlaying ? 'Stop' : 'Play'}
-                      </Button>
+                {/* Header Controls */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <h2 className="text-lg font-semibold">Spectrogram Visualisation</h2>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={togglePlayback}
+                      disabled={spectrogramUrls.length === 0 || isImageLoading}
+                    >
+                      {isPlaying ? (
+                        <X className="w-4 h-4 mr-2" />
+                      ) : (
+                        <Play className="w-4 h-4 mr-2" />
+                      )}
+                      {isPlaying ? 'Stop' : 'Play'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setShowAnnotations(!showAnnotations)}
+                    >
+                      {showAnnotations ? (
+                        <EyeOff className="w-4 h-4 mr-2" />
+                      ) : (
+                        <Eye className="w-4 h-4 mr-2" />
+                      )}
+                      {showAnnotations ? 'Hide' : 'Show'} Annotations
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={goToPreviousImage}
+                      disabled={spectrogramUrls.length === 0 || isPlaying || isImageLoading}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Image {currentImageIndex + 1} of {spectrogramUrls.length || 0}
+                      {isImageLoading && " (Loading...)"}
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={goToNextImage}
+                      disabled={spectrogramUrls.length === 0 || isPlaying || isImageLoading}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Playback Progress Bar */}
+                {isPlaying && spectrogramUrls.length > 0 && (
+                  <div className="mb-4">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${((currentImageIndex + 1) / spectrogramUrls.length) * 100}%` 
+                        }}
+                      />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={goToPreviousImage}
-                        disabled={spectrogramUrls.length === 0 || isPlaying || isImageLoading}
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </Button>
-                      <span className="text-sm text-gray-600">
-                        Pic {currentImageIndex + 1} of {spectrogramUrls.length || 0}
-                        {isImageLoading && " (Loading...)"}
-                      </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={goToNextImage}
-                        disabled={spectrogramUrls.length === 0 || isPlaying || isImageLoading}
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>0h</span>
+                      <span>{currentImageIndex + 1}h / {spectrogramUrls.length}h</span>
                     </div>
                   </div>
-
-                  {/* Playback Progress Bar */}
-                  {isPlaying && spectrogramUrls.length > 0 && (
-                    <div className="mb-4">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ 
-                            width: `${((currentImageIndex + 1) / spectrogramUrls.length) * 100}%` 
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0min</span>
-                        <span>{Math.round((currentImageIndex + 1) * 1)}min / {spectrogramUrls.length * 1}min</span>
-                      </div>
-                    </div>
-                  )}
-                
-                {/* Band Selection
-                <div className="flex gap-2 mb-6">
-                  {['Ultra-Low', 'Low', 'Mid', 'High', 'Ultra-High'].map((band) => (
-                    <Button
-                      key={band}
-                      variant={band === 'Ultra-Low' ? 'default' : 'outline'}
-                      size="sm"
-                      className="rounded-full"
-                    >
-                      {band}
-                    </Button>
-                  ))}
-                </div> */}
+                )}
 
                 {/* Spectrogram Image Container */}
-                <div className="relative bg-white border rounded-lg overflow-hidden h-[500px]">
+                <div className="relative bg-white border rounded-lg overflow-hidden">
                   <div className="flex h-full">
                     {/* Frequency Labels */}
                     <div className="flex flex-col justify-between p-2 w-16 border-r text-xs text-gray-500">
@@ -742,25 +635,38 @@ export default function Annotate() {
                     {/* Main Image Area */}
                     <div 
                       ref={containerRef}
-                      className={`flex-1 relative ${spectrogramUrls.length > 0 && !isImageLoading ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
+                      className={`flex-1 relative w-[952px] h-full ${spectrogramUrls.length > 0 && !isImageLoading && showAnnotations ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
+                      onMouseDown={showAnnotations ? startDrawing : undefined}
+                      onMouseMove={showAnnotations ? draw : undefined}
+                      onMouseUp={showAnnotations ? stopDrawing : undefined}
+                      onMouseLeave={showAnnotations ? stopDrawing : undefined}
                     >
                       {spectrogramUrls.length > 0 ? (
-                        <img
-                          ref={imageRef}
-                          key={`${spectrogramUrls[currentImageIndex]}-${currentImageIndex}`}
-                          src={spectrogramUrls[currentImageIndex]}
-                          alt={`Spectrogram ${currentImageIndex + 1}`}
-                          className="w-full h-full object-contain "
-                          draggable={false}
-                          crossOrigin="anonymous"
-                          onLoadStart={handleImageLoadStart}
-                          onLoad={handleImageLoadComplete}
-                          onError={handleImageError}
-                        />
+                        <>
+                          <img
+                            ref={imageRef}
+                            key={`${spectrogramUrls[currentImageIndex]}-${currentImageIndex}`}
+                            src={spectrogramUrls[currentImageIndex]}
+                            alt={`Spectrogram ${currentImageIndex + 1}`}
+                            className="w-full h-full object-contain"
+                            draggable={false}
+                            crossOrigin="anonymous"
+                            onLoadStart={handleImageLoadStart}
+                            onLoad={handleImageLoadComplete}
+                            onError={handleImageError}
+                          />
+                          {/* Spectrogram overlay area for debugging */}
+                          <div 
+                            className="absolute  bg-transparent bg-opacity-10 pointer-events-none"
+                            style={{
+                              left: `${spectrogramOverlay.left}px`,
+                              top: `${spectrogramOverlay.top}px`,
+                              width: `${spectrogramOverlay.width}px`,
+                              height: `${spectrogramOverlay.height}px`,
+                            }}
+                            title="Spectrogram annotation area"
+                          />
+                        </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100">
                           <div className="text-center text-gray-500">
@@ -780,59 +686,37 @@ export default function Annotate() {
                         </div>
                       )}
 
-                      {/* Existing Annotations */}
-                      {annotations.map((annotation) => {
-                        if (!showLayers[annotation.status as keyof typeof showLayers]) return null;
-                        
-                        return (
-                          <div
-                            key={annotation.id}
-                            className={`absolute border-2 ${getStatusColor(annotation.status)} border-opacity-70 bg-${getStatusColor(annotation.status)} bg-opacity-20 cursor-pointer hover:bg-opacity-30`}
-                            style={{
-                              left: annotation.x,
-                              top: annotation.y,
-                              width: annotation.width,
-                              height: annotation.height,
-                            }}
-                            onClick={() => handleAnnotationClick(annotation)}
-                          >
-                            <div className="absolute -top-6 left-0 text-xs bg-black bg-opacity-75 text-white px-2 py-1 rounded">
-                              {annotation.species || 'Unlabeled'}
-                            </div>
+                      {/* Existing Annotations for Current Image */}
+                      {showAnnotations && currentImageAnnotations.map((annotation) => (
+                        <div
+                          key={annotation.id}
+                          className={`absolute border-2 ${getStatusColor(annotation.status)} bg-opacity-20 cursor-pointer hover:bg-opacity-30`}
+                          style={{
+                            left: annotation.x,
+                            top: annotation.y,
+                            width: annotation.width,
+                            height: annotation.height,
+                          }}
+                          onClick={() => handleAnnotationClick(annotation)}
+                        >
+                          <div className="absolute -top-6 left-0 text-xs bg-black bg-opacity-75 text-white px-2 py-1 rounded">
+                            {annotation.species || 'Unlabeled'}
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
 
                       {/* Current Drawing Rectangle */}
-                      {currentRect && (
+                      {showAnnotations && currentRect && (
                         <div
                           className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-20"
                           style={{
-                            left: Math.min(currentRect.x, currentRect.x + currentRect.width),
-                            top: Math.min(currentRect.y, currentRect.y + currentRect.height),
-                            width: Math.abs(currentRect.width),
-                            height: Math.abs(currentRect.height),
+                            left: currentRect.x,
+                            top: currentRect.y,
+                            width: currentRect.width,
+                            height: currentRect.height,
                           }}
                         />
                       )}
-                    </div>
-                  </div>
-                  {/* Show Layers Legend */}
-                  <div className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white px-3 py-2 rounded">
-                    <div className="text-xs mb-1">Show layers:</div>
-                    <div className="flex gap-4 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                        <span>AI Annotations</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span>Approved</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span>Pending</span>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -842,11 +726,11 @@ export default function Annotate() {
         </div>
 
         {/* Sidebar */}
-        <div className="bg-white relative w-[427px] h-full border-l border-[#ebeef5]" data-node-id="152:342">
+        <div className="bg-white relative w-[427px] h-full border-l border-[#ebeef5]">
           <div className="flex flex-col gap-[24px] items-start p-[18px] h-full">
             {/* Title and Action Buttons */}
             <div className="flex items-center justify-between w-full">
-              <div className="font-medium text-[18px] text-[#0e131a] leading-[22px]" data-node-id="152:343">
+              <div className="font-medium text-[18px] text-[#0e131a] leading-[22px]">
                 Annotations
               </div>
               <div className="flex gap-2">
@@ -864,17 +748,6 @@ export default function Annotate() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={downloadAnnotatedImage}
-                  disabled={!date || spectrogramUrls.length === 0 || isImageLoading}
-                  className="h-8 px-3 text-xs hover:bg-gray-50 border-gray-200 transition-colors"
-                  title="Download annotated image"
-                >
-                  <Download className="w-3 h-3 mr-1" />
-                  Image
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={clearAllAnnotations}
                   disabled={annotations.length === 0}
                   className="h-8 px-3 text-xs hover:bg-red-50 border-gray-200 hover:border-red-200 hover:text-red-600 transition-colors"
@@ -888,15 +761,15 @@ export default function Annotate() {
             
             {/* Edit Annotation Section */}
             {showAnnotationForm && (
-              <div className="bg-[#f7f9fc] flex flex-col gap-[24px] items-start p-[12px] rounded-[6px] w-full" data-node-id="152:344">
-                <div className="font-medium text-[16px] text-[#0e131a] leading-[19px]" data-node-id="152:345">
+              <div className="bg-[#f7f9fc] flex flex-col gap-[24px] items-start p-[12px] rounded-[6px] w-full">
+                <div className="font-medium text-[16px] text-[#0e131a] leading-[19px]">
                   Edit Annotation
                 </div>
                 
-                <div className="flex flex-col gap-[16px] items-start w-full" data-node-id="152:346">
+                <div className="flex flex-col gap-[16px] items-start w-full">
                   {/* Author Field */}
-                  <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:347">
-                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:348">
+                  <div className="flex flex-col gap-[6px] items-start w-full">
+                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]">
                       Author
                     </div>
                     <Input
@@ -908,26 +781,26 @@ export default function Annotate() {
                   </div>
                   
                   {/* Species Field */}
-                  <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:347">
-                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:348">
+                  <div className="flex flex-col gap-[6px] items-start w-full">
+                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]">
                       Species
                     </div>
                     <Select value={formData.species} onValueChange={(value) => setFormData(prev => ({ ...prev, species: value }))}>
-                      <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]" data-node-id="152:349">
-                        <SelectValue placeholder="Select" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:350" />
+                      <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]">
+                        <SelectValue placeholder="Select" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="blue-whale">Blue Whale</SelectItem>
-                        <SelectItem value="humpback-whale">Humpback Whale</SelectItem>
                         <SelectItem value="fin-whale">Fin Whale</SelectItem>
-                        <SelectItem value="ship">Gray Whale</SelectItem>
+                        <SelectItem value="gray-whale">Gray Whale</SelectItem>
+                        <SelectItem value="ship">Ship</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   {/* Call Type Field */}
-                  <div className="flex flex-col gap-[6px] items-start w-full" data-node-id="152:355">
-                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]" data-node-id="152:356">
+                  <div className="flex flex-col gap-[6px] items-start w-full">
+                    <div className="font-normal text-[14px] text-[#131a24] leading-[17px]">
                       Call Type
                     </div>
                     <Select value={formData.callType} onValueChange={(value) => {
@@ -936,18 +809,12 @@ export default function Annotate() {
                         setCustomCallType('');
                       }
                     }}>
-                      <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]" data-node-id="152:357">
-                        <SelectValue placeholder="Select call type" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" data-node-id="152:358" />
+                      <SelectTrigger className="h-[38px] bg-white border-[#dde1eb] rounded-[8px] pl-[12px] pr-[8px] font-normal text-[14px] text-[#5e6166] leading-[17px] focus:ring-0 focus:ring-offset-0 focus:border-[#dde1eb]">
+                        <SelectValue placeholder="Select call type" className="font-normal text-[14px] text-[#5e6166] leading-[17px]" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="song">Song</SelectItem>
-                        <SelectItem value="call">Call</SelectItem>
-                        <SelectItem value="click">Click</SelectItem>
-                        <SelectItem value="whistle">Whistle</SelectItem>
-                        <SelectItem value="burst">Burst</SelectItem>
-                        <SelectItem value="moan">Moan</SelectItem>
-                        <SelectItem value="grunt">Grunt</SelectItem>
-                        <SelectItem value="tonal">Tonal</SelectItem>
+                        <SelectItem value="horn">Horn</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -967,13 +834,13 @@ export default function Annotate() {
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="flex gap-[8px] h-[42px] items-start w-full" data-node-id="152:363">
-                  <div className="flex-1 bg-[#131a24] flex items-center justify-center h-[36px] p-[12px] rounded-[6px]" data-node-id="152:364" onClick={handleAnnotationSubmit}>
-                    <div className="font-medium text-[14px] text-white leading-[16px]" data-node-id="152:365">
+                <div className="flex gap-[8px] h-[42px] items-start w-full">
+                  <div className="flex-1 bg-[#131a24] flex items-center justify-center h-[36px] p-[12px] rounded-[6px] cursor-pointer" onClick={handleAnnotationSubmit}>
+                    <div className="font-medium text-[14px] text-white leading-[16px]">
                       Done
                     </div>
                   </div>
-                  <div className="bg-white border border-[#ebeef5] flex items-center justify-center h-[36px] p-[12px] rounded-[6px] w-[42px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]" data-node-id="152:366" onClick={() => setShowAnnotationForm(false)}>
+                  <div className="bg-white border border-[#ebeef5] flex items-center justify-center h-[36px] p-[12px] rounded-[6px] w-[42px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] cursor-pointer" onClick={() => setShowAnnotationForm(false)}>
                     <Delete className="w-[16px] h-[16px] text-[#5e6166]" />
                   </div>
                 </div>
@@ -981,23 +848,28 @@ export default function Annotate() {
             )}
 
             {/* Annotations List */}
-            <div className="flex flex-col gap-[8px] items-start w-full" data-node-id="152:370">
-              {annotations.length > 0 ? (
-                // Dynamic Annotations List
-                annotations.map((annotation) => (
+            <div className="flex flex-col gap-[8px] items-start w-full overflow-y-auto flex-1">
+              <div className="text-sm text-gray-600 mb-2">
+                Image {currentImageIndex + 1}: {currentImageAnnotations.length} annotation(s)
+              </div>
+              {currentImageAnnotations.length > 0 ? (
+                currentImageAnnotations.map((annotation) => (
                   <div
                     key={annotation.id}
-                    className="border border-[#e7e7e8] flex gap-[12px] items-center p-[12px] rounded-[6px] w-full cursor-pointer"
+                    className="border border-[#e7e7e8] flex gap-[12px] items-center p-[12px] rounded-[6px] w-full cursor-pointer hover:bg-gray-50"
                     onClick={() => handleAnnotationClick(annotation)}
                   >
-                    <div className={`h-[42px] rounded-[60px] w-[4px] ${getStatusColor(annotation.status)}`} />
+                    <div className={`h-[42px] rounded-[60px] w-[4px] ${getStatusColor(annotation.status).split(' ')[1]}`} />
                     <div className="flex flex-col gap-[6px] items-start flex-1">
                       <div className="flex flex-col gap-[6px] items-start font-normal text-[14px] leading-[17px]">
                         <div className="text-[#0e131a]">
-                          {annotation.label || `${annotation.species} - ${annotation.callType}`}
+                          {annotation.species} - {annotation.callType}
                         </div>
                         <div className="text-[#5e6166]">
                           {getStatusLabel(annotation.status)}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {annotation.startTime.toFixed(1)}s - {annotation.endTime.toFixed(1)}s
                         </div>
                       </div>
                     </div>
@@ -1006,14 +878,16 @@ export default function Annotate() {
                         e.stopPropagation();
                         deleteAnnotation(annotation.id);
                       }}
-                      className="p-1"
+                      className="p-1 hover:bg-red-100 rounded"
                     >
                       <X className="w-4 h-4 text-[#5e6166]" />
                     </button>
                   </div>
                 ))
               ) : (
-                <div className="text-[#5e6166]">No annotations found</div>
+                <div className="text-[#5e6166] text-center w-full py-8">
+                  No annotations for this image
+                </div>
               )}
             </div>
           </div>
